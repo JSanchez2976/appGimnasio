@@ -5,6 +5,10 @@ import 'package:flutter/material.dart';
 
 import 'agregacion.dart';
 
+const Color colorDentro = Color(0xFF43A047); // verde
+const Color colorBajo = Color(0xFF1E88E5); // azul
+const Color colorAlto = Color(0xFFE53935); // rojo
+
 class GraficaBarras extends StatelessWidget {
   const GraficaBarras({
     super.key,
@@ -12,14 +16,32 @@ class GraficaBarras extends StatelessWidget {
     required this.color,
     required this.empiezaEnCero,
     this.objetivo,
+    this.margenBajo,
+    this.margenAlto,
   });
 
   final List<Barra> barras;
+
+  /// Color de las barras cuando no hay margen definido.
   final Color color;
 
   /// Calorías: true. Peso: false (el eje se ajusta a los datos).
   final bool empiezaEnCero;
   final double? objetivo;
+
+  /// Si hay objetivo y los dos márgenes, las barras se colorean por rango.
+  final double? margenBajo;
+  final double? margenAlto;
+
+  bool get _hayRango =>
+      objetivo != null && margenBajo != null && margenAlto != null;
+
+  Color _colorDe(double v) {
+    if (!_hayRango) return color;
+    if (v < objetivo! - margenBajo!) return colorBajo;
+    if (v > objetivo! + margenAlto!) return colorAlto;
+    return colorDentro;
+  }
 
   static double _intervalo(double rango) {
     final bruto = rango / 4;
@@ -32,7 +54,11 @@ class GraficaBarras extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final valores = barras.map((b) => b.valor).whereType<double>().toList();
-    final todos = <double>[...valores, if (objetivo != null) objetivo!];
+        final todos = <double>[
+      ...valores,
+      ?objetivo,
+      if (_hayRango) objetivo! + margenAlto!,
+    ];
 
     double minY;
     double maxY;
@@ -95,6 +121,17 @@ class GraficaBarras extends StatelessWidget {
               ),
             ),
           ),
+          // Franja suave que marca el rango aceptable alrededor del objetivo.
+          rangeAnnotations: RangeAnnotations(
+            horizontalRangeAnnotations: [
+              if (_hayRango)
+                HorizontalRangeAnnotation(
+                  y1: objetivo! - margenBajo!,
+                  y2: objetivo! + margenAlto!,
+                  color: colorDentro.withValues(alpha: 0.15),
+                ),
+            ],
+          ),
           extraLinesData: ExtraLinesData(
             horizontalLines: [
               if (objetivo != null)
@@ -115,7 +152,9 @@ class GraficaBarras extends StatelessWidget {
                     fromY: minY,
                     toY: barras[i].valor ?? minY,
                     width: ancho,
-                    color: color,
+                    color: barras[i].valor == null
+                        ? color
+                        : _colorDe(barras[i].valor!),
                     borderRadius:
                         const BorderRadius.vertical(top: Radius.circular(3)),
                   ),

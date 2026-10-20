@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'firebase_options.dart';
 import 'pantallas/inicio_pantalla.dart';
@@ -11,7 +12,12 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const MiApp());
+    runApp(
+    ProviderScope(
+      retry: (retryCount, error) => null,
+      child: const MiApp(),
+    ),
+  );
 }
 
 class MiApp extends StatelessWidget {

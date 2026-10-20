@@ -1,0 +1,235 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../datos/medidas_repositorio.dart';
+import '../datos/providers.dart';
+import '../datos/registro_repositorio.dart' show idDia;
+import '../graficas/agregacion.dart';
+import '../graficas/grafica_barras.dart';
+import '../widgets/selector_periodo.dart';
+import '../widgets/tarjeta_grafica.dart';
+
+class MedidasPantalla extends ConsumerStatefulWidget {
+  const MedidasPantalla({super.key});
+
+  @override
+  ConsumerState<MedidasPantalla> createState() => _MedidasPantallaState();
+}
+
+class _MedidasPantallaState extends ConsumerState<MedidasPantalla> {
+  final _repo = MedidasRepositorio.instancia;
+
+  DateTime _dia = DateTime.now();
+  final Map<Medida, TextEditingController> _ctrl = {
+    for (final m in Medida.values) m: TextEditingController(),
+  };
+  bool _cargado = false;
+
+  Medida _medida = Medida.cintura;
+  Periodo _periodo = Periodo.mes;
+  late DateTime _inicio = inicioPeriodo(Periodo.mes, DateTime.now());
+
+  @override
+  void initState() {
+    super.initState();
+    // Primera carga: rellena el día actual si aún no has escrito nada.
+    ref.listenManual<AsyncValue<List<MedidasRegistro>>>(
+      medidasProvider,
+      (anterior, nuevo) {
+        if (_cargado || !nuevo.hasValue) return;
+        _cargado = true;
+        if (_ctrl.values.every((c) => c.text.isEmpty)) {
+          _rellenar(nuevo.value ?? const <MedidasRegistro>[]);
+        }
+      },
+      fireImmediately: true,
+    );
+  }
+
+  @override
+  void dispose() {
+    for (final c in _ctrl.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  MedidasRegistro? _registroDelDia(List<MedidasRegistro> lista) {
+    final id = idDia(_dia);
+    for (final r in lista) {
+      if (idDia(r.fecha) == id) return r;
+    }
+    return null;
+  }
+
+  String _numero(double v) =>
+      v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
+
+  /// Muestra en los campos lo que ya estaba guardado en el día elegido.
+  void _rellenar(List<MedidasRegistro> lista) {
+    final registro = _registroDelDia(lista);
+    for (final m in Medida.values) {
+      final v = registro?.valores[m];
+      _ctrl[m]!.text = v == null ? '' : _numero(v);
+    }
+  }
+
+  void _irADia(DateTime dia, List<MedidasRegistro> lista) {
+    setState(() {
+      _dia = dia;
+      _rellenar(lista);
+    });
+  }
+
+  String _formato(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/'
+      '${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+  void _avisar(String texto) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+  }
+
+  Future<void> _elegirDia() async {
+    final elegido = await showDatePicker(
+      context: context,
+      initialDate: _dia,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (elegido == null) return;
+    final lista = ref.read(medidasProvider).value ?? const <MedidasRegistro>[];
+    _irADia(elegido, lista);
+  }
+
+  void _guardar() {
+    FocusScope.of(context).unfocus();
+    final lista = ref.read(medidasProvider).value ?? const <MedidasRegistro>[];
+    final previo = _registroDelDia(lista);
+
+    final cambios = <Medida, double?>{};
+    for (final m in Medida.values) {
+      final texto = _ctrl[m]!.text.trim().replaceAll(',', '.');
+      if (texto.isEmpty) {
+        // Campo vaciado: se borra el valor que hubiera guardado.
+        if (previo?.valores[m] != null) cambios[m] = null;
+        continue;
+      }
+      final v = double.tryParse(texto);
+      final limite = m == Medida.grasa ? 90.0 : 300.0;
+      if (v == null || v <= 0 || v > limite) {
+        _avisar('${m.etiqueta}: el valor no es válido.');
+        return;
+      }
+      cambios[m] = v;
+    }
+
+    if (cambios.isEmpty) {
+      _avisar('No hay nada que guardar.');
+      return;
+    }
+
+    _repo.guardar(_dia, cambios).catchError((Object _) {
+      _avisar('No se pudieron guardar las medidas.');
+    });
+    _avisar('Guardado');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final registros = ref.watch(medidasProvider);
+    final lista = registros.value ?? const <MedidasRegistro>[];
+    final previo = _registroDelDia(lista);
+    final hayDatos = previo != null && previo.valores.isNotEmpty;
+    final esquema = Theme.of(context).colorScheme;
+    final m = _medida;
+
+    final barras = barrasDeSerie(
+      _periodo,
+      _inicio,
+      <MapEntry<DateTime, double>>[
+        for (final r in lista)
+          if (r.valores[m] != null) MapEntry(r.fecha, r.valores[m]!),
+      ],
+    );
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        OutlinedButton.icon(
+          onPressed: _elegirDia,
+          icon: const Icon(Icons.calendar_today),
+          label: Text('Día: ${_formato(_dia)}'),
+        ),
+        if (hayDatos)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              'Este día ya tiene medidas guardadas. Puedes editarlas.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        if (registros.hasError)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              'No se pudieron cargar los datos: ${registros.error}',
+              style: TextStyle(color: esquema.error),
+            ),
+          ),
+        const SizedBox(height: 16),
+        for (final medida in Medida.values) ...[
+          TextField(
+            controller: _ctrl[medida],
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: medida.etiqueta,
+              suffixText: medida.unidad,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        FilledButton(onPressed: _guardar, child: const Text('Guardar')),
+        const SizedBox(height: 32),
+        Text('Evolución', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: [
+            for (final medida in Medida.values)
+              ChoiceChip(
+                label: Text(medida.etiqueta),
+                selected: _medida == medida,
+                onSelected: (_) => setState(() => _medida = medida),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        SelectorPeriodo(
+          periodo: _periodo,
+          inicio: _inicio,
+          alCambiarPeriodo: (p) => setState(() {
+            _periodo = p;
+            _inicio = inicioPeriodo(p, DateTime.now());
+          }),
+          alMover: (pasos) =>
+              setState(() => _inicio = desplazar(_periodo, _inicio, pasos)),
+        ),
+        const SizedBox(height: 8),
+        TarjetaGrafica(
+          titulo: '${m.etiqueta} (${m.unidad})',
+          subtitulo: _periodo == Periodo.anio
+              ? 'Media de cada mes'
+              : 'Medida de cada día',
+          grafica: GraficaBarras(
+            barras: barras,
+            color: esquema.secondary,
+            empiezaEnCero: false,
+          ),
+        ),
+      ],
+    );
+  }
+}

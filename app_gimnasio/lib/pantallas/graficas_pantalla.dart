@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../datos/ajustes_repositorio.dart';
 import '../datos/registro_repositorio.dart';
 import '../graficas/agregacion.dart';
 import '../graficas/grafica_barras.dart';
+import '../widgets/dialogo_objetivos.dart';
+import '../widgets/resumen_tarjeta.dart';
+import '../widgets/tarjeta_grafica.dart';
 
 class GraficasPantalla extends StatefulWidget {
   const GraficasPantalla({super.key});
@@ -70,7 +72,7 @@ class _GraficasPantallaState extends State<GraficasPantalla> {
   Future<void> _editarObjetivos() async {
     final nuevo = await showDialog<Objetivos>(
       context: context,
-      builder: (_) => _DialogoObjetivos(actual: _objetivos),
+      builder: (_) => DialogoObjetivos(actual: _objetivos),
     );
     if (nuevo == null) return;
     try {
@@ -83,33 +85,6 @@ class _GraficasPantallaState extends State<GraficasPantalla> {
     }
   }
 
-  Widget _tarjeta({
-    required String titulo,
-    required String subtitulo,
-    required String? objetivo,
-    required Widget grafica,
-  }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(titulo, style: Theme.of(context).textTheme.titleMedium),
-            Text(subtitulo, style: Theme.of(context).textTheme.bodySmall),
-            if (objetivo != null)
-              Text(
-                'Objetivo: $objetivo (línea naranja)',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            const SizedBox(height: 16),
-            grafica,
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final esquema = Theme.of(context).colorScheme;
@@ -117,10 +92,26 @@ class _GraficasPantallaState extends State<GraficasPantalla> {
     final barrasCal = barrasDeCalorias(_periodo, _inicio, _calorias);
     final esAnio = _periodo == Periodo.anio;
 
+    final kcal = _objetivos.calorias;
+    final mBajo = kcal == null ? null : _objetivos.margenBajoEfectivo;
+    final mAlto = kcal == null ? null : _objetivos.margenAltoEfectivo;
+
+    final resumen = resumenDe(
+      periodo: _periodo,
+      inicio: _inicio,
+      pesos: _pesos,
+      calorias: _calorias,
+      objetivoCalorias: kcal,
+      margenBajo: _objetivos.margenBajoEfectivo,
+      margenAlto: _objetivos.margenAltoEfectivo,
+    );
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         SegmentedButton<Periodo>(
+          showSelectedIcon: false,
+          expandedInsets: EdgeInsets.zero,
           segments: const [
             ButtonSegment(value: Periodo.semana, label: Text('Semana')),
             ButtonSegment(value: Periodo.mes, label: Text('Mes')),
@@ -167,11 +158,19 @@ class _GraficasPantallaState extends State<GraficasPantalla> {
               style: TextStyle(color: esquema.error),
             ),
           ),
-        _tarjeta(
+        ResumenTarjeta(
+          periodo: _periodo,
+          inicio: _inicio,
+          resumen: resumen,
+          hayObjetivoCalorias: kcal != null,
+        ),
+        const SizedBox(height: 8),
+        TarjetaGrafica(
           titulo: 'Peso (kg)',
           subtitulo: esAnio ? 'Media de cada mes' : 'Peso de cada día',
-          objetivo:
-              _objetivos.pesoKg == null ? null : '${_objetivos.pesoKg} kg',
+          objetivo: _objetivos.pesoKg == null
+              ? null
+              : 'Objetivo: ${_objetivos.pesoKg} kg (línea naranja)',
           grafica: GraficaBarras(
             barras: barrasPeso,
             color: esquema.primary,
@@ -180,108 +179,23 @@ class _GraficasPantallaState extends State<GraficasPantalla> {
           ),
         ),
         const SizedBox(height: 8),
-        _tarjeta(
+        TarjetaGrafica(
           titulo: 'Calorías (kcal)',
           subtitulo: esAnio ? 'Media diaria de cada mes' : 'Total de cada día',
-          objetivo:
-              _objetivos.calorias == null ? null : '${_objetivos.calorias} kcal',
+          objetivo: kcal == null
+              ? null
+              : 'Objetivo: $kcal kcal (línea naranja) · '
+                  'rango ${kcal - mBajo!} a ${kcal + mAlto!} kcal',
           grafica: GraficaBarras(
             barras: barrasCal,
             color: esquema.tertiary,
             empiezaEnCero: true,
-            objetivo: _objetivos.calorias?.toDouble(),
+            objetivo: kcal?.toDouble(),
+            margenBajo: mBajo?.toDouble(),
+            margenAlto: mAlto?.toDouble(),
           ),
+          pie: kcal == null ? null : const LeyendaRango(),
         ),
-      ],
-    );
-  }
-}
-
-class _DialogoObjetivos extends StatefulWidget {
-  const _DialogoObjetivos({required this.actual});
-
-  final Objetivos actual;
-
-  @override
-  State<_DialogoObjetivos> createState() => _DialogoObjetivosState();
-}
-
-class _DialogoObjetivosState extends State<_DialogoObjetivos> {
-  late final TextEditingController _peso =
-      TextEditingController(text: widget.actual.pesoKg?.toString() ?? '');
-  late final TextEditingController _cal =
-      TextEditingController(text: widget.actual.calorias?.toString() ?? '');
-  String? _error;
-
-  @override
-  void dispose() {
-    _peso.dispose();
-    _cal.dispose();
-    super.dispose();
-  }
-
-  void _guardar() {
-    final textoPeso = _peso.text.trim().replaceAll(',', '.');
-    final kg = textoPeso.isEmpty ? null : double.tryParse(textoPeso);
-    if (textoPeso.isNotEmpty && (kg == null || kg < 20 || kg > 500)) {
-      setState(() => _error = 'El peso objetivo no es válido.');
-      return;
-    }
-    final textoCal = _cal.text.trim();
-    final kcal = textoCal.isEmpty ? null : int.tryParse(textoCal);
-    if (textoCal.isNotEmpty && (kcal == null || kcal < 500 || kcal > 10000)) {
-      setState(() => _error = 'Las calorías objetivo no son válidas.');
-      return;
-    }
-    Navigator.pop(context, Objetivos(pesoKg: kg, calorias: kcal));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Tus objetivos'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _peso,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'Peso objetivo (kg)',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _cal,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(
-              labelText: 'Calorías objetivo (kcal al día)',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              _error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          ],
-          const SizedBox(height: 8),
-          Text(
-            'Déjalo vacío para quitar un objetivo.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(onPressed: _guardar, child: const Text('Guardar')),
       ],
     );
   }

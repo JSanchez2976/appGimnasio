@@ -128,3 +128,96 @@ List<Barra> barrasDeCalorias(
         .map((r) => MapEntry(r.fecha, r.total.toDouble())),
   );
 }
+
+class Resumen {
+  final int diasRegistrados;
+  final int diasConCalorias;
+  final double? mediaCalorias;
+
+  /// Null si no hay objetivo de calorías.
+  final int? diasEnRango;
+  final double? pesoMedio;
+
+  /// Kg de diferencia entre el peso medio del periodo y el del anterior.
+  final double? variacionPeso;
+
+  const Resumen({
+    required this.diasRegistrados,
+    required this.diasConCalorias,
+    required this.mediaCalorias,
+    required this.diasEnRango,
+    required this.pesoMedio,
+    required this.variacionPeso,
+  });
+}
+
+bool _dentro(Periodo p, DateTime inicio, DateTime fecha) {
+  final fin = desplazar(p, inicio, 1);
+  return !fecha.isBefore(inicio) && fecha.isBefore(fin);
+}
+
+double? _pesoMedio(Periodo p, DateTime inicio, List<PesoRegistro> pesos) {
+  var suma = 0.0;
+  var n = 0;
+  for (final r in pesos) {
+    if (_dentro(p, inicio, r.fecha)) {
+      suma += r.kg;
+      n++;
+    }
+  }
+  return n == 0 ? null : suma / n;
+}
+
+Resumen resumenDe({
+  required Periodo periodo,
+  required DateTime inicio,
+  required List<PesoRegistro> pesos,
+  required List<CaloriasRegistro> calorias,
+  int? objetivoCalorias,
+  int margenBajo = 100,
+  int margenAlto = 100,
+}) {
+  final dias = <String>{};
+  for (final r in pesos) {
+    if (_dentro(periodo, inicio, r.fecha)) {
+      dias.add(idDia(r.fecha));
+    }
+  }
+
+  var sumaCal = 0;
+  var diasCal = 0;
+  var enRango = 0;
+  for (final r in calorias) {
+    if (r.total <= 0 || !_dentro(periodo, inicio, r.fecha)) continue;
+    dias.add(idDia(r.fecha));
+    sumaCal += r.total;
+    diasCal++;
+    if (objetivoCalorias != null &&
+        r.total >= objetivoCalorias - margenBajo &&
+        r.total <= objetivoCalorias + margenAlto) {
+      enRango++;
+    }
+  }
+
+  final actual = _pesoMedio(periodo, inicio, pesos);
+  final previo = _pesoMedio(periodo, desplazar(periodo, inicio, -1), pesos);
+
+  return Resumen(
+    diasRegistrados: dias.length,
+    diasConCalorias: diasCal,
+    mediaCalorias: diasCal == 0 ? null : sumaCal / diasCal,
+    diasEnRango: objetivoCalorias == null ? null : enRango,
+    pesoMedio: actual,
+    variacionPeso: (actual != null && previo != null) ? actual - previo : null,
+  );
+}
+
+/// Para series genéricas (agua, medidas...): valor de cada día en semana y
+/// mes, y media de cada mes en año.
+List<Barra> barrasDeSerie(
+  Periodo p,
+  DateTime inicio,
+  Iterable<MapEntry<DateTime, double>> datos,
+) {
+  return _agrupar(p, inicio, datos);
+}

@@ -1,7 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import 'agua_pantalla.dart';
 import 'graficas_pantalla.dart';
+import 'medidas_pantalla.dart';
 import 'registro_pantalla.dart';
 
 class InicioPantalla extends StatefulWidget {
@@ -29,7 +31,12 @@ class _InicioPantallaState extends State<InicioPantalla> {
       ),
       body: IndexedStack(
         index: _pestana,
-        children: const [RegistroPantalla(), GraficasPantalla()],
+        children: const [
+          RegistroPantalla(),
+          GraficasPantalla(),
+          AguaPantalla(),
+          MedidasPantalla(),
+        ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _pestana,
@@ -37,6 +44,9 @@ class _InicioPantallaState extends State<InicioPantalla> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.edit_note), label: 'Registro'),
           NavigationDestination(icon: Icon(Icons.bar_chart), label: 'Gráficas'),
+          NavigationDestination(
+              icon: Icon(Icons.water_drop_outlined), label: 'Agua'),
+          NavigationDestination(icon: Icon(Icons.straighten), label: 'Medidas'),
         ],
       ),
     );
