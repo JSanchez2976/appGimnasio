@@ -5,16 +5,40 @@ enum Periodo { semana, mes, anio }
 class Barra {
   final String etiqueta;
   final double? valor;
-  const Barra(this.etiqueta, this.valor);
+
+  /// Hay una nota guardada en ese día (o en ese mes, en la vista Año).
+  final bool conNota;
+
+  const Barra(this.etiqueta, this.valor, {this.conNota = false});
 }
 
 const _mesesLargos = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
 ];
 const _mesesCortos = [
-  'ene', 'feb', 'mar', 'abr', 'may', 'jun',
-  'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+  'ene',
+  'feb',
+  'mar',
+  'abr',
+  'may',
+  'jun',
+  'jul',
+  'ago',
+  'sep',
+  'oct',
+  'nov',
+  'dic',
 ];
 
 /// Primer día del periodo que contiene [fecha] (la semana empieza en lunes).
@@ -68,9 +92,11 @@ int? _indice(Periodo p, DateTime inicio, DateTime fecha, int n) {
   switch (p) {
     case Periodo.semana:
     case Periodo.mes:
-      final dias = DateTime.utc(fecha.year, fecha.month, fecha.day)
-          .difference(DateTime.utc(inicio.year, inicio.month, inicio.day))
-          .inDays;
+      final dias = DateTime.utc(
+        fecha.year,
+        fecha.month,
+        fecha.day,
+      ).difference(DateTime.utc(inicio.year, inicio.month, inicio.day)).inDays;
       return (dias >= 0 && dias < n) ? dias : null;
     case Periodo.anio:
       return fecha.year == inicio.year ? fecha.month - 1 : null;
@@ -86,7 +112,18 @@ String _etiqueta(Periodo p, int i) {
       return (d == 1 || d % 5 == 0) ? '$d' : '';
     case Periodo.anio:
       return const [
-        'E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'
+        'E',
+        'F',
+        'M',
+        'A',
+        'M',
+        'J',
+        'J',
+        'A',
+        'S',
+        'O',
+        'N',
+        'D',
       ][i];
   }
 }
@@ -107,19 +144,22 @@ List<Barra> _agrupar(
   }
   return List.generate(
     n,
-    (i) => Barra(_etiqueta(p, i), cuentas[i] == 0 ? null : sumas[i] / cuentas[i]),
+    (i) =>
+        Barra(_etiqueta(p, i), cuentas[i] == 0 ? null : sumas[i] / cuentas[i]),
   );
 }
 
 /// Semana y mes: peso de cada día. Año: media de cada mes.
-List<Barra> barrasDePeso(
-    Periodo p, DateTime inicio, List<PesoRegistro> datos) {
+List<Barra> barrasDePeso(Periodo p, DateTime inicio, List<PesoRegistro> datos) {
   return _agrupar(p, inicio, datos.map((r) => MapEntry(r.fecha, r.kg)));
 }
 
 /// Semana y mes: total de cada día. Año: media diaria de cada mes.
 List<Barra> barrasDeCalorias(
-    Periodo p, DateTime inicio, List<CaloriasRegistro> datos) {
+  Periodo p,
+  DateTime inicio,
+  List<CaloriasRegistro> datos,
+) {
   return _agrupar(
     p,
     inicio,
@@ -220,4 +260,26 @@ List<Barra> barrasDeSerie(
   Iterable<MapEntry<DateTime, double>> datos,
 ) {
   return _agrupar(p, inicio, datos);
+}
+
+/// True si [fecha] cae dentro del periodo que empieza en [inicio].
+bool estaEnPeriodo(Periodo p, DateTime inicio, DateTime fecha) =>
+    _dentro(p, inicio, fecha);
+
+/// Devuelve las mismas barras, marcando las que tienen alguna nota.
+List<Barra> conMarcasDeNotas(
+  Periodo p,
+  DateTime inicio,
+  List<Barra> barras,
+  Iterable<DateTime> fechasConNota,
+) {
+  final marcadas = <int>{};
+  for (final f in fechasConNota) {
+    final i = _indice(p, inicio, f, barras.length);
+    if (i != null) marcadas.add(i);
+  }
+  return [
+    for (var i = 0; i < barras.length; i++)
+      Barra(barras[i].etiqueta, barras[i].valor, conNota: marcadas.contains(i)),
+  ];
 }

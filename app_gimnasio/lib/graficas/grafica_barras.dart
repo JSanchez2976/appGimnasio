@@ -104,10 +104,10 @@ class GraficaBarras extends StatelessWidget {
                     Text(value.toStringAsFixed(0), style: estiloEje),
               ),
             ),
-            bottomTitles: AxisTitles(
+                        bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 28,
+                reservedSize: 40,
                 getTitlesWidget: (value, meta) {
                   final i = value.toInt();
                   if (i < 0 || i >= barras.length) {
@@ -115,7 +115,22 @@ class GraficaBarras extends StatelessWidget {
                   }
                   return Padding(
                     padding: const EdgeInsets.only(top: 6),
-                    child: Text(barras[i].etiqueta, style: estiloEje),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(barras[i].etiqueta, style: estiloEje),
+                        if (barras[i].conNota)
+                          Container(
+                            margin: const EdgeInsets.only(top: 3),
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                      ],
+                    ),
                   );
                 },
               ),

@@ -2,18 +2,22 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../datos/notas_repositorio.dart';
+import '../datos/providers.dart';
 import '../datos/registro_repositorio.dart';
 
-class RegistroPantalla extends StatefulWidget {
+class RegistroPantalla extends ConsumerStatefulWidget {
   const RegistroPantalla({super.key});
 
   @override
-  State<RegistroPantalla> createState() => _RegistroPantallaState();
+  ConsumerState<RegistroPantalla> createState() => _RegistroPantallaState();
 }
 
-class _RegistroPantallaState extends State<RegistroPantalla> {
+class _RegistroPantallaState extends ConsumerState<RegistroPantalla> {
   final _repo = RegistroRepositorio.instancia;
+  final _notasRepo = NotasRepositorio.instancia;
 
   StreamSubscription<List<PesoRegistro>>? _subPesos;
   StreamSubscription<List<CaloriasRegistro>>? _subCalorias;
@@ -21,9 +25,11 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
   List<CaloriasRegistro> _calorias = const [];
   bool _pesosCargados = false;
   bool _caloriasCargadas = false;
+  bool _notasCargadas = false;
 
   DateTime _dia = DateTime.now();
   final _pesoCtrl = TextEditingController();
+  final _notaCtrl = TextEditingController();
   final Map<Franja, TextEditingController> _calCtrl = {
     for (final f in Franja.values) f: TextEditingController(),
   };
@@ -65,6 +71,15 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
       },
       onError: (Object _) => _avisar('No se pudieron cargar las calorías.'),
     );
+    ref.listenManual<AsyncValue<List<NotaRegistro>>>(
+      notasProvider,
+      (anterior, nuevo) {
+        if (_notasCargadas || !nuevo.hasValue) return;
+        _notasCargadas = true;
+        if (_notaCtrl.text.isEmpty) _rellenarNota();
+      },
+      fireImmediately: true,
+    );
   }
 
   @override
@@ -72,11 +87,15 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
     _subPesos?.cancel();
     _subCalorias?.cancel();
     _pesoCtrl.dispose();
+    _notaCtrl.dispose();
     for (final c in _calCtrl.values) {
       c.dispose();
     }
     super.dispose();
   }
+
+  List<NotaRegistro> get _notas =>
+      ref.read(notasProvider).value ?? const <NotaRegistro>[];
 
   PesoRegistro? _pesoDelDia() {
     final id = idDia(_dia);
@@ -90,6 +109,14 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
     final id = idDia(_dia);
     for (final c in _calorias) {
       if (idDia(c.fecha) == id) return c;
+    }
+    return null;
+  }
+
+  NotaRegistro? _notaDelDia(List<NotaRegistro> lista) {
+    final id = idDia(_dia);
+    for (final n in lista) {
+      if (idDia(n.fecha) == id) return n;
     }
     return null;
   }
@@ -110,12 +137,17 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
     }
   }
 
+  void _rellenarNota() {
+    _notaCtrl.text = _notaDelDia(_notas)?.texto ?? '';
+  }
+
   /// Cambia de día y muestra en los campos lo que ya estaba guardado.
   void _irADia(DateTime dia) {
     setState(() {
       _dia = dia;
       _rellenarPeso();
       _rellenarCalorias();
+      _rellenarNota();
     });
   }
 
@@ -162,7 +194,17 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
     }
     final borrarPeso = textoPeso.isEmpty && previoPeso != null;
 
-    if (kg == null && !borrarPeso && porFranja.isEmpty) {
+    final textoNota = _notaCtrl.text.trim();
+    final notaPrevia = _notaDelDia(_notas);
+    final guardarNota =
+        textoNota.isNotEmpty && textoNota != (notaPrevia?.texto ?? '');
+    final borrarNota = textoNota.isEmpty && notaPrevia != null;
+
+    if (kg == null &&
+        !borrarPeso &&
+        porFranja.isEmpty &&
+        !guardarNota &&
+        !borrarNota) {
       _avisar('No hay nada que guardar.');
       return;
     }
@@ -183,14 +225,25 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
         _avisar('No se pudieron guardar las calorías.');
       });
     }
+    if (guardarNota) {
+      _notasRepo.guardar(_dia, textoNota).catchError((Object _) {
+        _avisar('No se pudo guardar la nota.');
+      });
+    } else if (borrarNota) {
+      _notasRepo.borrar(_dia).catchError((Object _) {
+        _avisar('No se pudo borrar la nota.');
+      });
+    }
 
     _avisar('Guardado');
   }
 
   @override
   Widget build(BuildContext context) {
+    final notas = ref.watch(notasProvider).value ?? const <NotaRegistro>[];
     final hayDatos = _pesoDelDia() != null ||
-        (_caloriasDelDia()?.total ?? 0) > 0;
+        (_caloriasDelDia()?.total ?? 0) > 0 ||
+        _notaDelDia(notas) != null;
     final caloriasRecientes =
         _calorias.where((c) => c.total > 0).take(7).toList();
 
@@ -234,6 +287,19 @@ class _RegistroPantallaState extends State<RegistroPantalla> {
           ),
           const SizedBox(height: 12),
         ],
+        const SizedBox(height: 4),
+        Text('Nota del día', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _notaCtrl,
+          maxLines: 3,
+          maxLength: 200,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(
+            hintText: 'Cena fuera, cumpleaños, malestar...',
+            border: OutlineInputBorder(),
+          ),
+        ),
         const SizedBox(height: 4),
         FilledButton(onPressed: _guardar, child: const Text('Guardar')),
         const SizedBox(height: 32),

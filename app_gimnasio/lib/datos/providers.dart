@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'agua_repositorio.dart';
 import 'medidas_repositorio.dart';
+import 'notas_repositorio.dart';
 
 /// Usuario con sesión iniciada, o null.
 final usuarioProvider = StreamProvider<User?>(
@@ -19,11 +20,13 @@ StreamProvider<T> _porUsuario<T>(Stream<T> Function() crear) {
   });
 }
 
-final aguaProvider =
-    _porUsuario(() => AguaRepositorio.instancia.registros());
+final aguaProvider = _porUsuario(() => AguaRepositorio.instancia.registros());
 
-final aguaObjetivoProvider =
-    _porUsuario(() => AguaRepositorio.instancia.objetivo());
+final aguaObjetivoProvider = _porUsuario(
+  () => AguaRepositorio.instancia.objetivo(),
+);
 
-final medidasProvider =
-    _porUsuario(() => MedidasRepositorio.instancia.registros());
+final medidasProvider = _porUsuario(
+  () => MedidasRepositorio.instancia.registros(),
+);
+final notasProvider = _porUsuario(() => NotasRepositorio.instancia.registros());

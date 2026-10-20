@@ -1,23 +1,27 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../datos/ajustes_repositorio.dart';
+import '../datos/notas_repositorio.dart';
+import '../datos/providers.dart';
 import '../datos/registro_repositorio.dart';
 import '../graficas/agregacion.dart';
 import '../graficas/grafica_barras.dart';
 import '../widgets/dialogo_objetivos.dart';
+import '../widgets/notas_tarjeta.dart';
 import '../widgets/resumen_tarjeta.dart';
 import '../widgets/tarjeta_grafica.dart';
 
-class GraficasPantalla extends StatefulWidget {
+class GraficasPantalla extends ConsumerStatefulWidget {
   const GraficasPantalla({super.key});
 
   @override
-  State<GraficasPantalla> createState() => _GraficasPantallaState();
+  ConsumerState<GraficasPantalla> createState() => _GraficasPantallaState();
 }
 
-class _GraficasPantallaState extends State<GraficasPantalla> {
+class _GraficasPantallaState extends ConsumerState<GraficasPantalla> {
   final _registros = RegistroRepositorio.instancia;
   final _ajustes = AjustesRepositorio.instancia;
   final List<StreamSubscription<dynamic>> _subs = [];
@@ -88,8 +92,21 @@ class _GraficasPantallaState extends State<GraficasPantalla> {
   @override
   Widget build(BuildContext context) {
     final esquema = Theme.of(context).colorScheme;
-    final barrasPeso = barrasDePeso(_periodo, _inicio, _pesos);
-    final barrasCal = barrasDeCalorias(_periodo, _inicio, _calorias);
+    final notas = ref.watch(notasProvider).value ?? const <NotaRegistro>[];
+    final fechasNota = notas.map((n) => n.fecha);
+
+    final barrasPeso = conMarcasDeNotas(
+      _periodo,
+      _inicio,
+      barrasDePeso(_periodo, _inicio, _pesos),
+      fechasNota,
+    );
+    final barrasCal = conMarcasDeNotas(
+      _periodo,
+      _inicio,
+      barrasDeCalorias(_periodo, _inicio, _calorias),
+      fechasNota,
+    );
     final esAnio = _periodo == Periodo.anio;
 
     final kcal = _objetivos.calorias;
@@ -196,6 +213,8 @@ class _GraficasPantallaState extends State<GraficasPantalla> {
           ),
           pie: kcal == null ? null : const LeyendaRango(),
         ),
+        const SizedBox(height: 8),
+        NotasTarjeta(periodo: _periodo, inicio: _inicio, notas: notas),
       ],
     );
   }
