@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../datos/ajustes_repositorio.dart';
 import '../datos/medidas_repositorio.dart';
 import '../datos/providers.dart';
 import '../datos/registro_repositorio.dart' show idDia;
@@ -23,7 +24,9 @@ class _MedidasPantallaState extends ConsumerState<MedidasPantalla> {
   final Map<Medida, TextEditingController> _ctrl = {
     for (final m in Medida.values) m: TextEditingController(),
   };
+  final Set<Medida> _editadas = {};
   bool _cargado = false;
+  UnidadLongitud _unidadLongitud = UnidadLongitud.cm;
 
   Medida _medida = Medida.cintura;
   Periodo _periodo = Periodo.mes;
@@ -33,17 +36,36 @@ class _MedidasPantallaState extends ConsumerState<MedidasPantalla> {
   void initState() {
     super.initState();
     // Primera carga: rellena el día actual si aún no has escrito nada.
-    ref.listenManual<AsyncValue<List<MedidasRegistro>>>(
-      medidasProvider,
-      (anterior, nuevo) {
-        if (_cargado || !nuevo.hasValue) return;
-        _cargado = true;
-        if (_ctrl.values.every((c) => c.text.isEmpty)) {
-          _rellenar(nuevo.value ?? const <MedidasRegistro>[]);
+    ref.listenManual<AsyncValue<List<MedidasRegistro>>>(medidasProvider, (
+      anterior,
+      nuevo,
+    ) {
+      if (_cargado || !nuevo.hasValue) return;
+      _cargado = true;
+      if (_ctrl.values.every((c) => c.text.isEmpty)) {
+        _rellenar(nuevo.value ?? const <MedidasRegistro>[]);
+      }
+    }, fireImmediately: true);
+    ref.listenManual<AsyncValue<PreferenciasApp>>(preferenciasAppProvider, (
+      anterior,
+      nuevo,
+    ) {
+      final unidad = nuevo.value?.unidadLongitud ?? UnidadLongitud.cm;
+      if (unidad == _unidadLongitud) return;
+      final unidadAnterior = _unidadLongitud;
+      _unidadLongitud = unidad;
+      for (final medida in Medida.values) {
+        if (medida == Medida.grasa) continue;
+        final texto = _ctrl[medida]!.text.trim().replaceAll(',', '.');
+        final valor = double.tryParse(texto);
+        if (valor != null) {
+          _ctrl[medida]!.text = _numero(
+            unidad.desdeCm(unidadAnterior.aCm(valor)),
+          );
         }
-      },
-      fireImmediately: true,
-    );
+      }
+      if (mounted) setState(() {});
+    }, fireImmediately: true);
   }
 
   @override
@@ -68,9 +90,13 @@ class _MedidasPantallaState extends ConsumerState<MedidasPantalla> {
   /// Muestra en los campos lo que ya estaba guardado en el día elegido.
   void _rellenar(List<MedidasRegistro> lista) {
     final registro = _registroDelDia(lista);
+    _editadas.clear();
     for (final m in Medida.values) {
       final v = registro?.valores[m];
-      _ctrl[m]!.text = v == null ? '' : _numero(v);
+      final mostrado = v == null || m == Medida.grasa
+          ? v
+          : _unidadLongitud.desdeCm(v);
+      _ctrl[m]!.text = mostrado == null ? '' : _numero(mostrado);
     }
   }
 
@@ -109,15 +135,21 @@ class _MedidasPantallaState extends ConsumerState<MedidasPantalla> {
 
     final cambios = <Medida, double?>{};
     for (final m in Medida.values) {
+      if (!_editadas.contains(m)) continue;
       final texto = _ctrl[m]!.text.trim().replaceAll(',', '.');
       if (texto.isEmpty) {
         // Campo vaciado: se borra el valor que hubiera guardado.
         if (previo?.valores[m] != null) cambios[m] = null;
         continue;
       }
-      final v = double.tryParse(texto);
+      final introducido = double.tryParse(texto);
+      final v = introducido == null
+          ? null
+          : (m == Medida.grasa
+                ? introducido
+                : _unidadLongitud.aCm(introducido));
       final limite = m == Medida.grasa ? 90.0 : 300.0;
-      if (v == null || v <= 0 || v > limite) {
+      if (v == null || !v.isFinite || v <= 0 || v > limite) {
         _avisar('${m.etiqueta}: el valor no es válido.');
         return;
       }
@@ -149,7 +181,13 @@ class _MedidasPantallaState extends ConsumerState<MedidasPantalla> {
       _inicio,
       <MapEntry<DateTime, double>>[
         for (final r in lista)
-          if (r.valores[m] != null) MapEntry(r.fecha, r.valores[m]!),
+          if (r.valores[m] != null)
+            MapEntry(
+              r.fecha,
+              m == Medida.grasa
+                  ? r.valores[m]!
+                  : _unidadLongitud.desdeCm(r.valores[m]!),
+            ),
       ],
     );
 
@@ -181,11 +219,13 @@ class _MedidasPantallaState extends ConsumerState<MedidasPantalla> {
         for (final medida in Medida.values) ...[
           TextField(
             controller: _ctrl[medida],
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            onChanged: (_) => _editadas.add(medida),
             decoration: InputDecoration(
               labelText: medida.etiqueta,
-              suffixText: medida.unidad,
+              suffixText: medida == Medida.grasa
+                  ? medida.unidad
+                  : _unidadLongitud.simbolo,
               border: const OutlineInputBorder(),
             ),
           ),
@@ -219,7 +259,8 @@ class _MedidasPantallaState extends ConsumerState<MedidasPantalla> {
         ),
         const SizedBox(height: 8),
         TarjetaGrafica(
-          titulo: '${m.etiqueta} (${m.unidad})',
+          titulo:
+              '${m.etiqueta} (${m == Medida.grasa ? m.unidad : _unidadLongitud.simbolo})',
           subtitulo: _periodo == Periodo.anio
               ? 'Media de cada mes'
               : 'Medida de cada día',

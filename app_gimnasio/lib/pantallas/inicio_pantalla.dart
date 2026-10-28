@@ -1,9 +1,11 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import 'ajustes_pantalla.dart';
 import 'agua_pantalla.dart';
+import 'calculadora_pantalla.dart';
 import 'graficas_pantalla.dart';
 import 'medidas_pantalla.dart';
+import 'perfil_pantalla.dart';
 import 'registro_pantalla.dart';
 
 class InicioPantalla extends StatefulWidget {
@@ -23,9 +25,18 @@ class _InicioPantallaState extends State<InicioPantalla> {
         title: const Text('Peso y Calorías'),
         actions: [
           IconButton(
-            tooltip: 'Cerrar sesión',
-            icon: const Icon(Icons.logout),
-            onPressed: () => FirebaseAuth.instance.signOut(),
+            tooltip: 'Perfil',
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const PerfilPantalla()),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Ajustes',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const AjustesPantalla()),
+            ),
           ),
         ],
       ),
@@ -36,6 +47,7 @@ class _InicioPantallaState extends State<InicioPantalla> {
           GraficasPantalla(),
           AguaPantalla(),
           MedidasPantalla(),
+          CalculadoraPantalla(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -45,8 +57,14 @@ class _InicioPantallaState extends State<InicioPantalla> {
           NavigationDestination(icon: Icon(Icons.edit_note), label: 'Registro'),
           NavigationDestination(icon: Icon(Icons.bar_chart), label: 'Gráficas'),
           NavigationDestination(
-              icon: Icon(Icons.water_drop_outlined), label: 'Agua'),
+            icon: Icon(Icons.water_drop_outlined),
+            label: 'Agua',
+          ),
           NavigationDestination(icon: Icon(Icons.straighten), label: 'Medidas'),
+          NavigationDestination(
+            icon: Icon(Icons.calculate_outlined),
+            label: 'Calculadora',
+          ),
         ],
       ),
     );

@@ -10,19 +10,28 @@ const double limitePorcentaje = 0.20;
 /// Diálogo para editar objetivos y márgenes. Devuelve el [Objetivos] nuevo
 /// con Navigator.pop, o null si se cancela.
 class DialogoObjetivos extends StatefulWidget {
-  const DialogoObjetivos({super.key, required this.actual});
+  const DialogoObjetivos({
+    super.key,
+    required this.actual,
+    required this.unidadPeso,
+  });
 
   final Objetivos actual;
+  final UnidadPeso unidadPeso;
 
   @override
   State<DialogoObjetivos> createState() => _DialogoObjetivosState();
 }
 
 class _DialogoObjetivosState extends State<DialogoObjetivos> {
-  late final TextEditingController _peso =
-      TextEditingController(text: widget.actual.pesoKg?.toString() ?? '');
-  late final TextEditingController _cal =
-      TextEditingController(text: widget.actual.calorias?.toString() ?? '');
+  late final TextEditingController _peso = TextEditingController(
+    text: widget.actual.pesoKg == null
+        ? ''
+        : _formato(widget.unidadPeso.desdeKg(widget.actual.pesoKg!)),
+  );
+  late final TextEditingController _cal = TextEditingController(
+    text: widget.actual.calorias?.toString() ?? '',
+  );
   late final TextEditingController _bajo = TextEditingController(
     text: widget.actual.calorias == null
         ? ''
@@ -37,6 +46,17 @@ class _DialogoObjetivosState extends State<DialogoObjetivos> {
   String? _error;
   String? _aviso;
   bool _avisoMostrado = false;
+  bool _pesoEditado = false;
+
+  String _formato(double valor) {
+    if (widget.unidadPeso == UnidadPeso.lb) {
+      final redondeado = double.parse(valor.toStringAsFixed(1));
+      return redondeado == redondeado.roundToDouble()
+          ? redondeado.toStringAsFixed(0)
+          : redondeado.toStringAsFixed(1);
+    }
+    return valor == valor.roundToDouble() ? valor.toStringAsFixed(0) : '$valor';
+  }
 
   @override
   void dispose() {
@@ -77,8 +97,17 @@ class _DialogoObjetivosState extends State<DialogoObjetivos> {
 
   void _guardar() {
     final textoPeso = _peso.text.trim().replaceAll(',', '.');
-    final kg = textoPeso.isEmpty ? null : double.tryParse(textoPeso);
-    if (textoPeso.isNotEmpty && (kg == null || kg < 20 || kg > 500)) {
+    final pesoIntroducido = textoPeso.isEmpty
+        ? null
+        : double.tryParse(textoPeso);
+    final kg = !_pesoEditado
+        ? widget.actual.pesoKg
+        : pesoIntroducido == null
+        ? null
+        : widget.unidadPeso.aKg(pesoIntroducido);
+    if (_pesoEditado &&
+        textoPeso.isNotEmpty &&
+        (kg == null || !kg.isFinite || kg < 20 || kg > 500)) {
       setState(() {
         _error = 'El peso objetivo no es válido.';
         _aviso = null;
@@ -112,7 +141,8 @@ class _DialogoObjetivosState extends State<DialogoObjetivos> {
       final limite = (kcal * limitePorcentaje).floor();
       if (mBajo > limite || mAlto > limite) {
         setState(() {
-          _error = 'Ese margen es demasiado grande: con un objetivo de '
+          _error =
+              'Ese margen es demasiado grande: con un objetivo de '
               '$kcal kcal el máximo es $limite kcal '
               '(el ${(limitePorcentaje * 100).round()} % de tu objetivo).';
           _aviso = null;
@@ -126,7 +156,8 @@ class _DialogoObjetivosState extends State<DialogoObjetivos> {
         setState(() {
           _error = null;
           _avisoMostrado = true;
-          _aviso = 'Ojo, con un margen tan amplio tu objetivo pierde fuerza 😅 '
+          _aviso =
+              'Ojo, con un margen tan amplio tu objetivo pierde fuerza 😅 '
               'El $porcentaje % de tu objetivo de $kcal kcal son '
               '${umbralAviso.round()} kcal, y tu margen lo supera. '
               '¿Seguro que quieres dejarlo así? Tú decides: pulsa '
@@ -161,10 +192,12 @@ class _DialogoObjetivosState extends State<DialogoObjetivos> {
           children: [
             TextField(
               controller: _peso,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                labelText: 'Peso objetivo (kg)',
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              onChanged: (_) => _pesoEditado = true,
+              decoration: InputDecoration(
+                labelText: 'Peso objetivo (${widget.unidadPeso.simbolo})',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -187,10 +220,10 @@ class _DialogoObjetivosState extends State<DialogoObjetivos> {
             Text(
               hayCalorias
                   ? 'Cuánto puedes quedarte por debajo o pasarte y aun así '
-                      'contar el día como cumplido. Vacío = '
-                      '${Objetivos.margenPorDefecto}.'
+                        'contar el día como cumplido. Vacío = '
+                        '${Objetivos.margenPorDefecto}.'
                   : 'Pon primero unas calorías objetivo para poder ajustar '
-                      'el margen.',
+                        'el margen.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 8),

@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'ajustes_repositorio.dart';
 import 'agua_repositorio.dart';
 import 'medidas_repositorio.dart';
 import 'notas_repositorio.dart';
@@ -9,6 +10,12 @@ import 'notas_repositorio.dart';
 final usuarioProvider = StreamProvider<User?>(
   (ref) => FirebaseAuth.instance.authStateChanges(),
 );
+
+final preferenciasAppProvider = StreamProvider<PreferenciasApp>((ref) {
+  final usuario = ref.watch(usuarioProvider).value;
+  if (usuario == null) return Stream.value(const PreferenciasApp());
+  return AjustesRepositorio.instancia.preferenciasApp();
+});
 
 /// Crea un provider de datos que se reinicia cuando cambia el usuario,
 /// para no mostrar nunca datos de otra cuenta.

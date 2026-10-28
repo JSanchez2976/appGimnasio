@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../datos/ajustes_repositorio.dart';
+import '../datos/estimacion_peso.dart';
 import '../datos/notas_repositorio.dart';
 import '../datos/providers.dart';
 import '../datos/registro_repositorio.dart';
@@ -29,6 +30,7 @@ class _GraficasPantallaState extends ConsumerState<GraficasPantalla> {
   List<PesoRegistro> _pesos = const [];
   List<CaloriasRegistro> _calorias = const [];
   Objetivos _objetivos = const Objetivos();
+  PerfilCalculadora? _perfilCalculadora;
   Object? _error;
 
   Periodo _periodo = Periodo.semana;
@@ -37,18 +39,30 @@ class _GraficasPantallaState extends ConsumerState<GraficasPantalla> {
   @override
   void initState() {
     super.initState();
-    _subs.add(_registros.pesos().listen(
-          (l) => setState(() => _pesos = l),
-          onError: (Object e) => setState(() => _error = e),
-        ));
-    _subs.add(_registros.calorias().listen(
-          (l) => setState(() => _calorias = l),
-          onError: (Object e) => setState(() => _error = e),
-        ));
-    _subs.add(_ajustes.objetivos().listen(
-          (o) => setState(() => _objetivos = o),
-          onError: (Object e) => setState(() => _error = e),
-        ));
+    _subs.add(
+      _registros.pesos().listen(
+        (l) => setState(() => _pesos = l),
+        onError: (Object e) => setState(() => _error = e),
+      ),
+    );
+    _subs.add(
+      _registros.calorias().listen(
+        (l) => setState(() => _calorias = l),
+        onError: (Object e) => setState(() => _error = e),
+      ),
+    );
+    _subs.add(
+      _ajustes.objetivos().listen(
+        (o) => setState(() => _objetivos = o),
+        onError: (Object e) => setState(() => _error = e),
+      ),
+    );
+    _subs.add(
+      _ajustes.perfilCalculadora().listen(
+        (p) => setState(() => _perfilCalculadora = p),
+        onError: (Object e) => setState(() => _error = e),
+      ),
+    );
   }
 
   @override
@@ -73,10 +87,11 @@ class _GraficasPantallaState extends ConsumerState<GraficasPantalla> {
   bool get _puedeAvanzar =>
       !desplazar(_periodo, _inicio, 1).isAfter(DateTime.now());
 
-  Future<void> _editarObjetivos() async {
+  Future<void> _editarObjetivos(UnidadPeso unidadPeso) async {
     final nuevo = await showDialog<Objetivos>(
       context: context,
-      builder: (_) => DialogoObjetivos(actual: _objetivos),
+      builder: (_) =>
+          DialogoObjetivos(actual: _objetivos, unidadPeso: unidadPeso),
     );
     if (nuevo == null) return;
     try {
@@ -92,13 +107,24 @@ class _GraficasPantallaState extends ConsumerState<GraficasPantalla> {
   @override
   Widget build(BuildContext context) {
     final esquema = Theme.of(context).colorScheme;
+    final preferencias =
+        ref.watch(preferenciasAppProvider).value ?? const PreferenciasApp();
     final notas = ref.watch(notasProvider).value ?? const <NotaRegistro>[];
     final fechasNota = notas.map((n) => n.fecha);
 
     final barrasPeso = conMarcasDeNotas(
       _periodo,
       _inicio,
-      barrasDePeso(_periodo, _inicio, _pesos),
+      barrasDePeso(_periodo, _inicio, _pesos)
+          .map(
+            (b) => Barra(
+              b.etiqueta,
+              b.valor == null
+                  ? null
+                  : preferencias.unidadPeso.desdeKg(b.valor!),
+            ),
+          )
+          .toList(),
       fechasNota,
     );
     final barrasCal = conMarcasDeNotas(
@@ -110,8 +136,24 @@ class _GraficasPantallaState extends ConsumerState<GraficasPantalla> {
     final esAnio = _periodo == Periodo.anio;
 
     final kcal = _objetivos.calorias;
+    final hoy = DateTime.now();
+    final caloriasHoy = _calorias
+        .where((c) => idDia(c.fecha) == idDia(hoy))
+        .fold<int>(0, (total, c) => total + c.total);
     final mBajo = kcal == null ? null : _objetivos.margenBajoEfectivo;
     final mAlto = kcal == null ? null : _objetivos.margenAltoEfectivo;
+    final pesoActual = _pesos.isEmpty
+        ? null
+        : _pesos.reduce((a, b) => a.fecha.isAfter(b.fecha) ? a : b).kg;
+    final estimacionPeso = estimarTiempoObjetivoPeso(
+      perfil: _perfilCalculadora,
+      objetivoCalorias: kcal,
+      pesoObjetivoKg: _objetivos.pesoKg,
+      pesoActualKg: pesoActual,
+    );
+    final pesoObjetivo = _objetivos.pesoKg == null
+        ? null
+        : preferencias.unidadPeso.desdeKg(_objetivos.pesoKg!);
 
     final resumen = resumenDe(
       periodo: _periodo,
@@ -162,7 +204,7 @@ class _GraficasPantallaState extends ConsumerState<GraficasPantalla> {
         Align(
           alignment: Alignment.centerRight,
           child: TextButton.icon(
-            onPressed: _editarObjetivos,
+            onPressed: () => _editarObjetivos(preferencias.unidadPeso),
             icon: const Icon(Icons.flag_outlined),
             label: const Text('Objetivos'),
           ),
@@ -180,19 +222,25 @@ class _GraficasPantallaState extends ConsumerState<GraficasPantalla> {
           inicio: _inicio,
           resumen: resumen,
           hayObjetivoCalorias: kcal != null,
+          kcalRestantesHoy: kcal == null
+              ? null
+              : (kcal - caloriasHoy).clamp(0, kcal).toInt(),
+          estimacionPeso: estimacionPeso,
+          unidadPeso: preferencias.unidadPeso,
         ),
         const SizedBox(height: 8),
         TarjetaGrafica(
-          titulo: 'Peso (kg)',
+          titulo: 'Peso (${preferencias.unidadPeso.simbolo})',
           subtitulo: esAnio ? 'Media de cada mes' : 'Peso de cada día',
-          objetivo: _objetivos.pesoKg == null
+          objetivo: pesoObjetivo == null
               ? null
-              : 'Objetivo: ${_objetivos.pesoKg} kg (línea naranja)',
+              : 'Objetivo: ${pesoObjetivo.toStringAsFixed(1)} '
+                    '${preferencias.unidadPeso.simbolo} (línea naranja)',
           grafica: GraficaBarras(
             barras: barrasPeso,
             color: esquema.primary,
             empiezaEnCero: false,
-            objetivo: _objetivos.pesoKg,
+            objetivo: pesoObjetivo,
           ),
         ),
         const SizedBox(height: 8),
@@ -202,7 +250,7 @@ class _GraficasPantallaState extends ConsumerState<GraficasPantalla> {
           objetivo: kcal == null
               ? null
               : 'Objetivo: $kcal kcal (línea naranja) · '
-                  'rango ${kcal - mBajo!} a ${kcal + mAlto!} kcal',
+                    'rango ${kcal - mBajo!} a ${kcal + mAlto!} kcal',
           grafica: GraficaBarras(
             barras: barrasCal,
             color: esquema.tertiary,

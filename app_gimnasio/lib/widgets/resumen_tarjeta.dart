@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../datos/ajustes_repositorio.dart';
 import '../graficas/agregacion.dart';
 
 /// Dibuja el resumen del periodo. Los cálculos viven en `resumenDe`.
@@ -10,14 +11,21 @@ class ResumenTarjeta extends StatelessWidget {
     required this.inicio,
     required this.resumen,
     required this.hayObjetivoCalorias,
+    required this.kcalRestantesHoy,
+    required this.estimacionPeso,
+    required this.unidadPeso,
   });
 
   final Periodo periodo;
   final DateTime inicio;
   final Resumen resumen;
   final bool hayObjetivoCalorias;
+  final int? kcalRestantesHoy;
+  final String? estimacionPeso;
+  final UnidadPeso unidadPeso;
 
-  String _kg(double v) => v.toStringAsFixed(1);
+  String _peso(double kg) =>
+      '${unidadPeso.desdeKg(kg).toStringAsFixed(1)} ${unidadPeso.simbolo}';
 
   Widget _fila(String etiqueta, String valor) {
     return Padding(
@@ -72,8 +80,7 @@ class ResumenTarjeta extends StatelessWidget {
       rango = '${r.diasEnRango ?? 0} de ${r.diasConCalorias} días';
     }
 
-    final pesoMedio =
-        r.pesoMedio == null ? 'Sin datos' : '${_kg(r.pesoMedio!)} kg';
+    final pesoMedio = r.pesoMedio == null ? 'Sin datos' : _peso(r.pesoMedio!);
 
     final String variacion;
     if (r.variacionPeso == null) {
@@ -81,9 +88,9 @@ class ResumenTarjeta extends StatelessWidget {
     } else {
       final v = r.variacionPeso!;
       if (v.abs() < 0.05) {
-        variacion = '0.0 kg';
+        variacion = '0.0 ${unidadPeso.simbolo}';
       } else {
-        variacion = '${v > 0 ? '+' : ''}${_kg(v)} kg';
+        variacion = '${v > 0 ? '+' : ''}${_peso(v.abs())}';
       }
     }
 
@@ -101,6 +108,21 @@ class ResumenTarjeta extends StatelessWidget {
             const SizedBox(height: 8),
             _fila('Días registrados', dias),
             _fila('Media de calorías', media),
+            if (periodo == Periodo.semana)
+              _fila(
+                'Kcal restantes',
+                kcalRestantesHoy == null ? 'Sin objetivo' : '$kcalRestantesHoy',
+              ),
+            if (periodo == Periodo.semana && estimacionPeso != null)
+              _fila('Tiempo hasta el peso objetivo', estimacionPeso!),
+            if (periodo == Periodo.semana && estimacionPeso != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  'Estimación simplificada: el gasto real puede variar.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
             _fila('Días dentro del rango', rango),
             _fila('Peso medio', pesoMedio),
             _fila('Peso respecto a $anterior', variacion),

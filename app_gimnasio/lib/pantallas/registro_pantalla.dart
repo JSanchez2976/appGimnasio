@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../datos/notas_repositorio.dart';
+import '../datos/ajustes_repositorio.dart';
 import '../datos/providers.dart';
 import '../datos/registro_repositorio.dart';
 
@@ -26,6 +27,9 @@ class _RegistroPantallaState extends ConsumerState<RegistroPantalla> {
   bool _pesosCargados = false;
   bool _caloriasCargadas = false;
   bool _notasCargadas = false;
+  bool _pesoEditado = false;
+  double? _pesoIntroducidoKg;
+  UnidadPeso _unidadPeso = UnidadPeso.kg;
 
   DateTime _dia = DateTime.now();
   final _pesoCtrl = TextEditingController();
@@ -44,42 +48,68 @@ class _RegistroPantallaState extends ConsumerState<RegistroPantalla> {
   @override
   void initState() {
     super.initState();
-    _subPesos = _repo.pesos().listen(
-      (lista) {
-        setState(() {
-          _pesos = lista;
-          // Primera carga: rellena el día actual si aún no has escrito nada.
-          if (!_pesosCargados) {
-            _pesosCargados = true;
-            if (_pesoCtrl.text.isEmpty) _rellenarPeso();
+    _subPesos = _repo.pesos().listen((lista) {
+      setState(() {
+        _pesos = lista;
+        if (_pesoEditado) {
+          final escrito = double.tryParse(
+            _pesoCtrl.text.trim().replaceAll(',', '.'),
+          );
+          final guardado = _pesoDelDia();
+          final introducidoKg =
+              _pesoIntroducidoKg ??
+              (escrito == null ? null : _unidadPeso.aKg(escrito));
+          if ((_pesoCtrl.text.trim().isEmpty && guardado == null) ||
+              (escrito != null &&
+                  guardado != null &&
+                  introducidoKg == guardado.kg)) {
+            _pesoEditado = false;
+            _pesoIntroducidoKg = guardado?.kg;
           }
-        });
-      },
-      onError: (Object _) => _avisar('No se pudieron cargar los pesos.'),
-    );
-    _subCalorias = _repo.calorias().listen(
-      (lista) {
-        setState(() {
-          _calorias = lista;
-          if (!_caloriasCargadas) {
-            _caloriasCargadas = true;
-            if (_calCtrl.values.every((c) => c.text.isEmpty)) {
-              _rellenarCalorias();
-            }
+        }
+        // Primera carga: rellena el día actual si aún no has escrito nada.
+        if (!_pesosCargados) {
+          _pesosCargados = true;
+          if (_pesoCtrl.text.isEmpty) _rellenarPeso();
+        }
+      });
+    }, onError: (Object _) => _avisar('No se pudieron cargar los pesos.'));
+    _subCalorias = _repo.calorias().listen((lista) {
+      setState(() {
+        _calorias = lista;
+        if (!_caloriasCargadas) {
+          _caloriasCargadas = true;
+          if (_calCtrl.values.every((c) => c.text.isEmpty)) {
+            _rellenarCalorias();
           }
-        });
-      },
-      onError: (Object _) => _avisar('No se pudieron cargar las calorías.'),
-    );
-    ref.listenManual<AsyncValue<List<NotaRegistro>>>(
-      notasProvider,
-      (anterior, nuevo) {
-        if (_notasCargadas || !nuevo.hasValue) return;
-        _notasCargadas = true;
-        if (_notaCtrl.text.isEmpty) _rellenarNota();
-      },
-      fireImmediately: true,
-    );
+        }
+      });
+    }, onError: (Object _) => _avisar('No se pudieron cargar las calorías.'));
+    ref.listenManual<AsyncValue<List<NotaRegistro>>>(notasProvider, (
+      anterior,
+      nuevo,
+    ) {
+      if (_notasCargadas || !nuevo.hasValue) return;
+      _notasCargadas = true;
+      if (_notaCtrl.text.isEmpty) _rellenarNota();
+    }, fireImmediately: true);
+    ref.listenManual<AsyncValue<PreferenciasApp>>(preferenciasAppProvider, (
+      anterior,
+      nuevo,
+    ) {
+      final unidad = nuevo.value?.unidadPeso ?? UnidadPeso.kg;
+      if (unidad == _unidadPeso) return;
+      final escrito = double.tryParse(
+        _pesoCtrl.text.trim().replaceAll(',', '.'),
+      );
+      final kg = _pesoEditado
+          ? (_pesoIntroducidoKg ??
+                (escrito == null ? null : _unidadPeso.aKg(escrito)))
+          : (_pesoDelDia()?.kg);
+      _unidadPeso = unidad;
+      _pesoCtrl.text = kg == null ? '' : _kgATexto(_unidadPeso.desdeKg(kg));
+      if (mounted) setState(() {});
+    }, fireImmediately: true);
   }
 
   @override
@@ -121,12 +151,21 @@ class _RegistroPantallaState extends ConsumerState<RegistroPantalla> {
     return null;
   }
 
-  String _kgATexto(double kg) =>
-      kg == kg.roundToDouble() ? kg.toStringAsFixed(0) : kg.toString();
+  String _kgATexto(double kg) {
+    if (_unidadPeso == UnidadPeso.lb) {
+      final redondeado = double.parse(kg.toStringAsFixed(1));
+      return redondeado == redondeado.roundToDouble()
+          ? redondeado.toStringAsFixed(0)
+          : redondeado.toStringAsFixed(1);
+    }
+    return kg == kg.roundToDouble() ? kg.toStringAsFixed(0) : kg.toString();
+  }
 
   void _rellenarPeso() {
     final p = _pesoDelDia();
-    _pesoCtrl.text = p == null ? '' : _kgATexto(p.kg);
+    _pesoCtrl.text = p == null ? '' : _kgATexto(_unidadPeso.desdeKg(p.kg));
+    _pesoEditado = false;
+    _pesoIntroducidoKg = p?.kg;
   }
 
   void _rellenarCalorias() {
@@ -174,25 +213,47 @@ class _RegistroPantallaState extends ConsumerState<RegistroPantalla> {
     FocusScope.of(context).unfocus();
 
     final textoPeso = _pesoCtrl.text.trim().replaceAll(',', '.');
-    final kg = double.tryParse(textoPeso);
-    if (textoPeso.isNotEmpty && (kg == null || kg <= 0 || kg > 500)) {
+    final pesoIntroducido = double.tryParse(textoPeso);
+    final previoPeso = _pesoDelDia();
+    final introducidoKg = _pesoEditado
+        ? (_pesoIntroducidoKg ??
+              (pesoIntroducido == null
+                  ? null
+                  : _unidadPeso.aKg(pesoIntroducido)))
+        : null;
+    final mismoPeso =
+        previoPeso != null &&
+        (introducidoKg == previoPeso.kg ||
+            (!_pesoEditado &&
+                pesoIntroducido == _unidadPeso.desdeKg(previoPeso.kg)));
+    final kg = !_pesoEditado || mismoPeso || pesoIntroducido == null
+        ? null
+        : introducidoKg;
+    if (_pesoEditado &&
+        textoPeso.isNotEmpty &&
+        !mismoPeso &&
+        (kg == null || !kg.isFinite || kg <= 0 || kg > 500)) {
       _avisar('El peso no es válido.');
       return;
     }
 
-    final previoPeso = _pesoDelDia();
     final previoCal = _caloriasDelDia();
 
     final porFranja = <Franja, int?>{};
     for (final f in Franja.values) {
-      final n = int.tryParse(_calCtrl[f]!.text.trim());
-      if (n != null) {
+      final texto = _calCtrl[f]!.text.trim();
+      final n = int.tryParse(texto);
+      if (texto.isNotEmpty && (n == null || n > 10000)) {
+        _avisar('Las calorías de cada franja deben estar entre 0 y 10000.');
+        return;
+      }
+      if (texto.isNotEmpty && n != null) {
         porFranja[f] = n;
       } else if ((previoCal?.porFranja[f] ?? 0) > 0) {
         porFranja[f] = null; // campo vaciado: se borra el valor guardado
       }
     }
-    final borrarPeso = textoPeso.isEmpty && previoPeso != null;
+    final borrarPeso = _pesoEditado && textoPeso.isEmpty && previoPeso != null;
 
     final textoNota = _notaCtrl.text.trim();
     final notaPrevia = _notaDelDia(_notas);
@@ -241,11 +302,14 @@ class _RegistroPantallaState extends ConsumerState<RegistroPantalla> {
   @override
   Widget build(BuildContext context) {
     final notas = ref.watch(notasProvider).value ?? const <NotaRegistro>[];
-    final hayDatos = _pesoDelDia() != null ||
+    final hayDatos =
+        _pesoDelDia() != null ||
         (_caloriasDelDia()?.total ?? 0) > 0 ||
         _notaDelDia(notas) != null;
-    final caloriasRecientes =
-        _calorias.where((c) => c.total > 0).take(7).toList();
+    final caloriasRecientes = _calorias
+        .where((c) => c.total > 0)
+        .take(3)
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -267,8 +331,13 @@ class _RegistroPantallaState extends ConsumerState<RegistroPantalla> {
         TextField(
           controller: _pesoCtrl,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            labelText: 'Peso (kg)',
+          onChanged: (texto) {
+            _pesoEditado = true;
+            final valor = double.tryParse(texto.trim().replaceAll(',', '.'));
+            _pesoIntroducidoKg = valor == null ? null : _unidadPeso.aKg(valor);
+          },
+          decoration: InputDecoration(
+            labelText: 'Peso (${_unidadPeso.simbolo})',
             border: OutlineInputBorder(),
           ),
         ),
@@ -279,6 +348,7 @@ class _RegistroPantallaState extends ConsumerState<RegistroPantalla> {
           TextField(
             controller: _calCtrl[f],
             keyboardType: TextInputType.number,
+            maxLength: 5,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: InputDecoration(
               labelText: _nombres[f],
@@ -310,16 +380,20 @@ class _RegistroPantallaState extends ConsumerState<RegistroPantalla> {
             child: Text('Aún no hay pesos registrados.'),
           )
         else
-          for (final p in _pesos.take(7))
+          for (final p in _pesos.take(3))
             ListTile(
               dense: true,
               title: Text(_formato(p.fecha)),
-              trailing: Text('${_kgATexto(p.kg)} kg'),
+              trailing: Text(
+                '${_kgATexto(_unidadPeso.desdeKg(p.kg))} ${_unidadPeso.simbolo}',
+              ),
               onTap: () => _irADia(p.fecha),
             ),
         const SizedBox(height: 16),
-        Text('Últimas calorías',
-            style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          'Últimas calorías',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         if (caloriasRecientes.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
