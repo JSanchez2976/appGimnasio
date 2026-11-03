@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../datos/ajustes_repositorio.dart';
 import '../datos/providers.dart';
 import '../datos/registro_repositorio.dart';
+import 'recordatorios_pantalla.dart';
 
 class PerfilPantalla extends ConsumerWidget {
   const PerfilPantalla({super.key});
@@ -70,137 +71,199 @@ class PerfilPantalla extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
           children: [
-          StreamBuilder<String?>(
-            stream: AjustesRepositorio.instancia.nombrePerfil(),
-            builder: (context, nombreSnapshot) {
-              final nombre = nombreSnapshot.data ?? usuario?.displayName;
-              return Card(
-                child: ListTile(
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.person_outline),
+            StreamBuilder<String?>(
+              stream: AjustesRepositorio.instancia.nombrePerfil(),
+              builder: (context, nombreSnapshot) {
+                final nombre = nombreSnapshot.data ?? usuario?.displayName;
+                return Card(
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      child: Icon(Icons.person_outline),
+                    ),
+                    title: Text(
+                      nombre == null || nombre.isEmpty ? 'Mi perfil' : nombre,
+                    ),
+                    subtitle: Text(usuario?.email ?? 'Cuenta'),
+                    trailing: IconButton(
+                      tooltip: 'Editar nombre',
+                      onPressed: () => _editarNombre(context, nombre ?? ''),
+                      icon: const Icon(Icons.edit_outlined),
+                    ),
                   ),
-                  title: Text(
-                    nombre == null || nombre.isEmpty ? 'Mi perfil' : nombre,
-                  ),
-                  subtitle: Text(usuario?.email ?? 'Cuenta'),
-                  trailing: IconButton(
-                    tooltip: 'Editar nombre',
-                    onPressed: () => _editarNombre(context, nombre ?? ''),
-                    icon: const Icon(Icons.edit_outlined),
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 20),
-          Text('Mis datos', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          StreamBuilder<PerfilCalculadora?>(
-            stream: AjustesRepositorio.instancia.perfilCalculadora(),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return const _MensajePerfil(
-                  texto: 'No se pudieron cargar tus datos.',
                 );
-              }
-              final perfil = snapshot.data;
-              if (perfil == null) {
-                return const _MensajePerfil(
-                  texto:
-                      'Aún no has guardado tus datos. Puedes hacerlo desde la Calculadora.',
-                );
-              }
-              return Card(
-                child: Column(
-                  children: [
-                    _DatoPerfil(etiqueta: 'Edad', valor: '${perfil.edad} años'),
-                    _DatoPerfil(
-                      etiqueta: 'Altura',
-                      valor:
-                          '${_formato(preferencias.unidadLongitud.desdeCm(perfil.alturaCm))} ${preferencias.unidadLongitud.simbolo}',
-                    ),
-                    _DatoPerfil(
-                      etiqueta: 'Peso actual',
-                      valor:
-                          '${_formato(preferencias.unidadPeso.desdeKg(perfil.pesoKg))} ${preferencias.unidadPeso.simbolo}',
-                    ),
-                    _DatoPerfil(
-                      etiqueta: 'Actividad',
-                      valor: perfil.actividad.etiqueta,
-                    ),
-                    _DatoPerfil(
-                      etiqueta: 'Meta',
-                      valor: switch (perfil.meta) {
-                        MetaCalculadora.perder => 'Perder peso',
-                        MetaCalculadora.mantener => 'Mantener peso',
-                        MetaCalculadora.ganar => 'Ganar peso',
-                      },
-                      ultimo: true,
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 20),
-          Text('Logros', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          StreamBuilder<List<PesoRegistro>>(
-            stream: RegistroRepositorio.instancia.pesos(),
-            builder: (context, pesosSnapshot) => StreamBuilder<List<CaloriasRegistro>>(
-              stream: RegistroRepositorio.instancia.calorias(),
-              builder: (context, caloriasSnapshot) => StreamBuilder<Objetivos>(
-                stream: AjustesRepositorio.instancia.objetivos(),
-                builder: (context, objetivosSnapshot) {
-                  if (pesosSnapshot.hasError ||
-                      caloriasSnapshot.hasError ||
-                      objetivosSnapshot.hasError) {
-                    return const _MensajePerfil(
-                      texto: 'No se pudieron cargar tus logros.',
-                    );
-                  }
-                  if (!pesosSnapshot.hasData ||
-                      !caloriasSnapshot.hasData ||
-                      !objetivosSnapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  final registrosCalorias = caloriasSnapshot.data!;
-                  final diasActivos = <String>{
-                    for (final peso in pesosSnapshot.data!) idDia(peso.fecha),
-                    for (final registro in registrosCalorias)
-                      idDia(registro.fecha),
-                  }.length;
-                  final objetivoKcal = objetivosSnapshot.data!.calorias;
-                  final diasEnObjetivoKcal = objetivoKcal == null
-                      ? null
-                      : registrosCalorias.where((registro) {
-                          final total = registro.total;
-                          return total > 0 &&
-                              total >= objetivoKcal -
-                                  objetivosSnapshot.data!.margenBajoEfectivo &&
-                              total <= objetivoKcal +
-                                  objetivosSnapshot.data!.margenAltoEfectivo;
-                        }).length;
-                  return Column(
-                    children: [
-                      _LogroRangos(titulo: 'Constancia', dias: diasActivos),
-                      const SizedBox(height: 10),
-                      if (diasEnObjetivoKcal == null)
-                        const _MensajePerfil(
-                          texto:
-                              'Guarda un objetivo diario de kcal para empezar el logro de constancia con las calorías.',
-                        )
-                      else
-                        _LogroRangos(
-                          titulo: 'Constancia con kcal',
-                          dias: diasEnObjetivoKcal,
-                        ),
-                    ],
+              },
+            ),
+            const SizedBox(height: 20),
+            Text('Mis datos', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            StreamBuilder<PerfilCalculadora?>(
+              stream: AjustesRepositorio.instancia.perfilCalculadora(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return const _MensajePerfil(
+                    texto: 'No se pudieron cargar tus datos.',
                   );
-                },
+                }
+                final perfil = snapshot.data;
+                if (perfil == null) {
+                  return const _MensajePerfil(
+                    texto: 'Aún no has guardado tus datos. Puedes hacerlo desde la Calculadora.',
+                  );
+                }
+                return Card(
+                  child: Column(
+                    children: [
+                      _DatoPerfil(
+                        etiqueta: 'Edad',
+                        valor: '${perfil.edad} años',
+                      ),
+                      _DatoPerfil(
+                        etiqueta: 'Altura',
+                        valor:
+                            '${_formato(preferencias.unidadLongitud.desdeCm(perfil.alturaCm))} ${preferencias.unidadLongitud.simbolo}',
+                      ),
+                      _DatoPerfil(
+                        etiqueta: 'Peso actual',
+                        valor:
+                            '${_formato(preferencias.unidadPeso.desdeKg(perfil.pesoKg))} ${preferencias.unidadPeso.simbolo}',
+                      ),
+                      _DatoPerfil(
+                        etiqueta: 'Actividad',
+                        valor: perfil.actividad.etiqueta,
+                      ),
+                      _DatoPerfil(
+                        etiqueta: 'Meta',
+                        valor: switch (perfil.meta) {
+                          MetaCalculadora.perder => 'Perder peso',
+                          MetaCalculadora.mantener => 'Mantener peso',
+                          MetaCalculadora.ganar => 'Ganar peso',
+                        },
+                        ultimo: true,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.notifications_active_outlined),
+                title: const Text('Recordatorios'),
+                subtitle: const Text('Elige horas y cuándo quieres que avisemos.'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const RecordatoriosPantalla(),
+                  ),
+                ),
               ),
             ),
-          ),
+            const SizedBox(height: 20),
+            StreamBuilder<List<PesoRegistro>>(
+              stream: RegistroRepositorio.instancia.pesos(),
+              builder: (context, pesosSnapshot) =>
+                  StreamBuilder<List<CaloriasRegistro>>(
+                    stream: RegistroRepositorio.instancia.calorias(),
+                    builder: (context, caloriasSnapshot) =>
+                        StreamBuilder<Objetivos>(
+                          stream: AjustesRepositorio.instancia.objetivos(),
+                          builder: (context, objetivosSnapshot) {
+                            if (pesosSnapshot.hasError ||
+                                caloriasSnapshot.hasError ||
+                                objetivosSnapshot.hasError) {
+                              return const _MensajePerfil(
+                                texto: 'No se pudieron cargar tus logros.',
+                              );
+                            }
+                            if (!pesosSnapshot.hasData ||
+                                !caloriasSnapshot.hasData ||
+                                !objetivosSnapshot.hasData) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+                            final registrosCalorias = caloriasSnapshot.data!;
+                            final diasActivos = <String>{
+                              for (final peso in pesosSnapshot.data!)
+                                idDia(peso.fecha),
+                              for (final registro in registrosCalorias)
+                                idDia(registro.fecha),
+                            };
+                            final objetivoKcal =
+                                objetivosSnapshot.data!.calorias;
+                            final diasEnObjetivoKcal = objetivoKcal == null
+                                ? null
+                                : registrosCalorias.where((registro) {
+                                    final total = registro.total;
+                                    return total > 0 &&
+                                        total >=
+                                            objetivoKcal -
+                                                objetivosSnapshot
+                                                    .data!
+                                                    .margenBajoEfectivo &&
+                                        total <=
+                                            objetivoKcal +
+                                                objetivosSnapshot
+                                                    .data!
+                                                    .margenAltoEfectivo;
+                                  }).map((registro) => idDia(registro.fecha)).toSet();
+                            final rachaRegistro =
+                                _calcularRacha(diasActivos, DateTime.now());
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  'Rachas',
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                                const SizedBox(height: 8),
+                                _TarjetaRacha(
+                                  titulo: 'Racha de registro',
+                                  icono: Icons.local_fire_department_outlined,
+                                  racha: rachaRegistro,
+                                ),
+                                const SizedBox(height: 8),
+                                if (diasEnObjetivoKcal == null)
+                                  const _MensajePerfil(
+                                    texto:
+                                        'Guarda un objetivo diario de kcal para activar la racha de kcal.',
+                                  )
+                                else
+                                  _TarjetaRacha(
+                                    titulo: 'Racha de kcal',
+                                    icono: Icons.bolt_outlined,
+                                    racha: _calcularRacha(
+                                      diasEnObjetivoKcal,
+                                      DateTime.now(),
+                                    ),
+                                  ),
+                                const SizedBox(height: 20),
+                                Text(
+                                  'Logros',
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                                const SizedBox(height: 8),
+                                _LogroRangos(
+                                  titulo: 'Constancia',
+                                  dias: diasActivos.length,
+                                ),
+                                const SizedBox(height: 10),
+                                if (diasEnObjetivoKcal == null)
+                                  const _MensajePerfil(
+                                    texto: 'Guarda un objetivo diario de kcal para empezar el logro de constancia con las calorías.',
+                                  )
+                                else
+                                  _LogroRangos(
+                                    titulo: 'Constancia con kcal',
+                                    dias: diasEnObjetivoKcal.length,
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
+                  ),
+            ),
           ],
         ),
       ),
@@ -241,6 +304,77 @@ class _MensajePerfil extends StatelessWidget {
   );
 }
 
+class _DatosRacha {
+  const _DatosRacha(this.actual, this.mejor);
+  final int actual;
+  final int mejor;
+}
+
+_DatosRacha _calcularRacha(Set<String> dias, DateTime hoyLocal) {
+  DateTime fecha(String clave) {
+    final partes = clave.split('-').map(int.parse).toList();
+    return DateTime.utc(partes[0], partes[1], partes[2]);
+  }
+
+  final ordenados = dias.toList()..sort();
+  var mejor = 0;
+  var rachaTemporal = 0;
+  DateTime? anterior;
+  for (final clave in ordenados) {
+    final dia = fecha(clave);
+    rachaTemporal = anterior != null && dia.difference(anterior).inDays == 1
+        ? rachaTemporal + 1
+        : 1;
+    if (rachaTemporal > mejor) mejor = rachaTemporal;
+    anterior = dia;
+  }
+
+  var cursor = DateTime.utc(hoyLocal.year, hoyLocal.month, hoyLocal.day);
+  if (!dias.contains(idDia(cursor))) {
+    cursor = cursor.subtract(const Duration(days: 1));
+  }
+  var actual = 0;
+  while (dias.contains(idDia(cursor))) {
+    actual++;
+    cursor = cursor.subtract(const Duration(days: 1));
+  }
+  return _DatosRacha(actual, mejor);
+}
+
+class _TarjetaRacha extends StatelessWidget {
+  const _TarjetaRacha({
+    required this.titulo,
+    required this.icono,
+    required this.racha,
+  });
+
+  final String titulo;
+  final IconData icono;
+  final _DatosRacha racha;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: ListTile(
+      leading: Icon(icono, color: Theme.of(context).colorScheme.primary),
+      title: Text(titulo),
+      subtitle: Text('Mejor racha: ${racha.mejor} ${racha.mejor == 1 ? 'día' : 'días'}'),
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            '${racha.actual}',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(racha.actual == 1 ? 'día seguido' : 'días seguidos'),
+        ],
+      ),
+    ),
+  );
+}
+
 enum _RangoConstancia {
   bronce('Bronce', 3, Color(0xFFB87333), Icons.workspace_premium_outlined),
   plata('Plata', 7, Color(0xFF9AA7B3), Icons.workspace_premium_outlined),
@@ -248,7 +382,12 @@ enum _RangoConstancia {
   esmeralda('Esmeralda', 30, Color(0xFF078A68), Icons.diamond_outlined),
   diamante('Diamante', 60, Color(0xFF2A9DCE), Icons.diamond);
 
-  const _RangoConstancia(this.nombre, this.diasNecesarios, this.color, this.icono);
+  const _RangoConstancia(
+    this.nombre,
+    this.diasNecesarios,
+    this.color,
+    this.icono,
+  );
   final String nombre;
   final int diasNecesarios;
   final Color color;
@@ -322,7 +461,10 @@ class _LogroRangos extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(titulo, style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        titulo,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 3),
                       Text(
                         rangoConseguido >= 0

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../datos/ajustes_repositorio.dart';
+import '../datos/servicio_recordatorios.dart';
 import '../datos/providers.dart';
 import '../navegacion.dart';
 
@@ -31,6 +32,7 @@ class _AjustesPantallaState extends ConsumerState<AjustesPantalla> {
   Future<void> _cerrarSesion() async {
     setState(() => _cerrandoSesion = true);
     try {
+      await ServicioRecordatorios.instancia.cancelarTodos();
       await FirebaseAuth.instance.signOut();
       appNavigatorKey.currentState?.pop();
       await Future<void>.delayed(Duration.zero);

@@ -59,6 +59,20 @@ class RegistroRepositorio {
     return _coleccion('pesos').doc(idDia(_soloDia(dia))).delete();
   }
 
+  Future<bool> hayDatosRegistrados(DateTime dia) async {
+    final id = idDia(_soloDia(dia));
+    final docs = await Future.wait([
+      _coleccion('pesos').doc(id).get(),
+      _coleccion('calorias').doc(id).get(),
+    ]);
+    if (docs.first.exists) return true;
+    final calorias = docs.last.data();
+    if (calorias == null) return false;
+    return Franja.values.any(
+      (franja) => ((calorias[franja.name] as num?)?.toInt() ?? 0) > 0,
+    );
+  }
+
   Stream<List<PesoRegistro>> pesos() {
     return _coleccion('pesos')
         .orderBy('fecha', descending: true)

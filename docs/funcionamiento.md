@@ -15,6 +15,18 @@ sesión y confirma la acción con un diálogo.
 
 Perfil permite guardar un nombre visible junto al correo de la cuenta y, si
 existe, muestra los datos guardados de la calculadora con las unidades elegidas.
+En **Recordatorios**, se pueden configurar hasta diez horas diarias y elegir
+entre recibir avisos siempre o solo mientras no se haya guardado peso ni kcal
+ese día. Al registrar peso o calorías con el modo condicional, los avisos que
+queden ese día se posponen hasta el día siguiente. Los horarios se guardan por
+usuario en Firestore; las notificaciones son locales del dispositivo y se
+reprograman al iniciar sesión. Se requiere permiso del sistema operativo.
+También muestra dos rachas: **Racha de registro** cuenta días consecutivos con
+un registro de peso o calorías; **Racha de kcal** cuenta días consecutivos cuyo
+total queda dentro del margen del objetivo diario. Si hoy aún no hay registro,
+la racha actual se mantiene durante el día cuando hubo actividad ayer. Se
+muestran la racha actual y la mejor racha histórica.
+
 Reúne dos logros con los mismos rangos:
 **Constancia** cuenta los días únicos en los que se haya guardado un registro
 de peso o de calorías; **Constancia con kcal** cuenta los días con un total de

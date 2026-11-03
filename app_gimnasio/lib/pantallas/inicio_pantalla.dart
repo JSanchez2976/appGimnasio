@@ -1,5 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../datos/ajustes_repositorio.dart';
+import '../datos/registro_repositorio.dart';
+import '../datos/servicio_recordatorios.dart';
 import 'ajustes_pantalla.dart';
 import 'agua_pantalla.dart';
 import 'calculadora_pantalla.dart';
@@ -17,6 +22,26 @@ class InicioPantalla extends StatefulWidget {
 
 class _InicioPantallaState extends State<InicioPantalla> {
   int _pestana = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_restaurarRecordatorios());
+  }
+
+  Future<void> _restaurarRecordatorios() async {
+    try {
+      final config = await AjustesRepositorio.instancia.recordatorios().first;
+      final hayDatos = await RegistroRepositorio.instancia
+          .hayDatosRegistrados(DateTime.now());
+      await ServicioRecordatorios.instancia.programar(
+        config,
+        hayDatosHoy: hayDatos,
+      );
+    } catch (_) {
+      // Si no hay datos guardados todavía, la app sigue funcionando sin avisos.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

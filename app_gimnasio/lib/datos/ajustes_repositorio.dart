@@ -76,6 +76,18 @@ class PreferenciasApp {
   );
 }
 
+enum CondicionRecordatorio { siempre, siNoHayRegistro }
+
+class ConfiguracionRecordatorios {
+  final List<String> horas;
+  final CondicionRecordatorio condicion;
+
+  const ConfiguracionRecordatorios({
+    this.horas = const [],
+    this.condicion = CondicionRecordatorio.siempre,
+  });
+}
+
 enum ActividadCalculadora {
   sedentaria('Sedentaria', 1.2),
   ligera('Ligera (1-3 días/semana)', 1.375),
@@ -178,6 +190,38 @@ class AjustesRepositorio {
   Future<void> guardarNombrePerfil(String nombre) {
     return _doc().set({'perfilNombre': nombre.trim()}, SetOptions(merge: true));
   }
+
+  Stream<ConfiguracionRecordatorios> recordatorios() {
+    return _doc().snapshots().map((snap) {
+      final m = snap.data()?['recordatorios'];
+      if (m is! Map<String, dynamic>) return const ConfiguracionRecordatorios();
+      final valorHoras = m['horas'];
+      final horas = valorHoras is List
+          ? valorHoras.whereType<String>().where(_horaValida).toSet().toList()
+          : <String>[];
+      horas.sort();
+      return ConfiguracionRecordatorios(
+        horas: horas,
+        condicion: CondicionRecordatorio.values.firstWhere(
+          (condicion) => condicion.name == m['condicion'],
+          orElse: () => CondicionRecordatorio.siempre,
+        ),
+      );
+    });
+  }
+
+  Future<void> guardarRecordatorios(ConfiguracionRecordatorios config) {
+    final horas = config.horas.where(_horaValida).toSet().toList()..sort();
+    return _doc().set({
+      'recordatorios': {
+        'horas': horas,
+        'condicion': config.condicion.name,
+      },
+    }, SetOptions(merge: true));
+  }
+
+  static bool _horaValida(String hora) =>
+      RegExp(r'^(?:[01]\d|2[0-3]):[0-5]\d$').hasMatch(hora);
 
   Stream<Objetivos> objetivos() {
     return _doc().snapshots().map((snap) {

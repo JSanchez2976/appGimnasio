@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +10,7 @@ import '../datos/notas_repositorio.dart';
 import '../datos/ajustes_repositorio.dart';
 import '../datos/providers.dart';
 import '../datos/registro_repositorio.dart';
+import '../datos/servicio_recordatorios.dart';
 
 class RegistroPantalla extends ConsumerStatefulWidget {
   const RegistroPantalla({super.key});
@@ -294,6 +297,21 @@ class _RegistroPantallaState extends ConsumerState<RegistroPantalla> {
       _notasRepo.borrar(_dia).catchError((Object _) {
         _avisar('No se pudo borrar la nota.');
       });
+    }
+
+    if (idDia(_dia) == idDia(DateTime.now())) {
+      final quedaPeso = kg != null || (previoPeso != null && !borrarPeso);
+      var totalKcal = 0;
+      for (final franja in Franja.values) {
+        totalKcal += porFranja.containsKey(franja)
+            ? (porFranja[franja] ?? 0)
+            : (previoCal?.porFranja[franja] ?? 0);
+      }
+      unawaited(
+        ServicioRecordatorios.instancia
+            .actualizarDespuesDeRegistro(quedaPeso || totalKcal > 0)
+            .catchError((Object _) {}),
+      );
     }
 
     _avisar('Guardado');
