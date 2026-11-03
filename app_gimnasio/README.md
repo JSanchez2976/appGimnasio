@@ -1,17 +1,15 @@
-# app_gimnasio
+# CalorieGraph
 
-A new Flutter project.
+App Flutter de uso personal para registrar peso, calorías, agua y medidas, ver
+gráficas de evolución y mantener objetivos y recordatorios.
 
-## Getting Started
+## Ejecutar en Android
 
-This project is a starting point for a Flutter application.
+1. Instala Flutter y configura el SDK de Android.
+2. Configura Firebase para tu proyecto Android y coloca tu `google-services.json`
+   en `android/app/`.
+3. Desde esta carpeta, ejecuta `flutter pub get` y `flutter run`.
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Las reglas de Firestore están en `firestore.rules`. Para desplegarlas con Firebase
+CLI, ejecuta `firebase deploy --only firestore:rules` después de seleccionar tu
+proyecto.

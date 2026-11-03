@@ -1,11 +1,11 @@
 {
-    "name": "app_gimnasio",
-    "short_name": "app_gimnasio",
+    "name": "CalorieGraph",
+    "short_name": "CalorieGraph",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0D756B",
+    "theme_color": "#0D756B",
+    "description": "Seguimiento personal de peso, calorías, agua y medidas.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

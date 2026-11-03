@@ -28,7 +28,7 @@ class MiApp extends ConsumerWidget {
         ref.watch(preferenciasAppProvider).value?.tema ?? TemaApp.sistema;
     return MaterialApp(
       navigatorKey: appNavigatorKey,
-      title: 'Peso y Calorías',
+      title: 'CalorieGraph',
       debugShowCheckedModeBanner: false,
       locale: const Locale('es', 'ES'),
       supportedLocales: const [Locale('es', 'ES')],

@@ -47,7 +47,21 @@ class _InicioPantallaState extends State<InicioPantalla> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Peso y Calorías'),
+        title: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                'assets/branding/calorie_graph.png',
+                width: 30,
+                height: 30,
+                semanticLabel: 'Logo de CalorieGraph',
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Text('CalorieGraph'),
+          ],
+        ),
         actions: [
           IconButton(
             tooltip: 'Perfil',

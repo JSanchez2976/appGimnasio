@@ -83,8 +83,19 @@ class _LoginPantallaState extends State<LoginPantalla> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    Center(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: Image.asset(
+                          'assets/branding/calorie_graph.png',
+                          width: 104,
+                          height: 104,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     Text(
-                      'Peso y Calorías',
+                      'CalorieGraph',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
