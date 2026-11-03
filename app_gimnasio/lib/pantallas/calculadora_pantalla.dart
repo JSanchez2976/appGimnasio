@@ -332,127 +332,144 @@ class _CalculadoraPantallaState extends ConsumerState<CalculadoraPantalla> {
           ),
         ),
         const SizedBox(height: 16),
-        TextField(
-          controller: _edad,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Edad',
-            suffixText: 'años',
-            border: OutlineInputBorder(),
-          ),
-          onChanged: (_) => setState(() => _error = null),
-        ),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          key: ValueKey(_sexo),
-          initialValue: _sexo,
-          decoration: const InputDecoration(
-            labelText: 'Sexo usado en la fórmula',
-            border: OutlineInputBorder(),
-          ),
-          items: const [
-            DropdownMenuItem(value: 'mujer', child: Text('Mujer')),
-            DropdownMenuItem(value: 'hombre', child: Text('Hombre')),
-          ],
-          onChanged: (value) => setState(() => _sexo = value ?? _sexo),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _altura,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(
-            labelText: 'Altura',
-            suffixText: _unidadLongitud.simbolo,
-            border: OutlineInputBorder(),
-          ),
-          onChanged: (texto) => setState(() {
-            _alturaEditada = true;
-            final valor = _decimal(texto);
-            _alturaIntroducidaCm = valor == null
-                ? null
-                : _unidadLongitud.aCm(valor);
-            _error = null;
-          }),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _peso,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(
-            labelText: 'Peso actual',
-            suffixText: _unidadPeso.simbolo,
-            border: OutlineInputBorder(),
-          ),
-          onChanged: (texto) => setState(() {
-            _pesoEditado = true;
-            final valor = _decimal(texto);
-            _pesoIntroducidoKg = valor == null ? null : _unidadPeso.aKg(valor);
-            _error = null;
-          }),
-        ),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<ActividadCalculadora>(
-          key: ValueKey(_actividad),
-          initialValue: _actividad,
-          isExpanded: true,
-          decoration: const InputDecoration(
-            labelText: 'Nivel de actividad',
-            border: OutlineInputBorder(),
-          ),
-          items: [
-            for (final actividad in ActividadCalculadora.values)
-              DropdownMenuItem(
-                value: actividad,
-                child: Text(actividad.etiqueta),
-              ),
-          ],
-          onChanged: (value) =>
-              setState(() => _actividad = value ?? _actividad),
-        ),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<MetaCalculadora>(
-          key: ValueKey(_meta),
-          initialValue: _meta,
-          decoration: const InputDecoration(
-            labelText: 'Meta',
-            border: OutlineInputBorder(),
-          ),
-          items: const [
-            DropdownMenuItem(
-              value: MetaCalculadora.perder,
-              child: Text('Perder peso'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tus datos',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _edad,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Edad',
+                    suffixText: 'años',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (_) => setState(() => _error = null),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  key: ValueKey(_sexo),
+                  initialValue: _sexo,
+                  decoration: const InputDecoration(
+                    labelText: 'Sexo usado en la fórmula',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'mujer', child: Text('Mujer')),
+                    DropdownMenuItem(value: 'hombre', child: Text('Hombre')),
+                  ],
+                  onChanged: (value) => setState(() => _sexo = value ?? _sexo),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _altura,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: 'Altura',
+                    suffixText: _unidadLongitud.simbolo,
+                    border: const OutlineInputBorder(),
+                  ),
+                  onChanged: (texto) => setState(() {
+                    _alturaEditada = true;
+                    final valor = _decimal(texto);
+                    _alturaIntroducidaCm = valor == null
+                        ? null
+                        : _unidadLongitud.aCm(valor);
+                    _error = null;
+                  }),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _peso,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: 'Peso actual',
+                    suffixText: _unidadPeso.simbolo,
+                    border: const OutlineInputBorder(),
+                  ),
+                  onChanged: (texto) => setState(() {
+                    _pesoEditado = true;
+                    final valor = _decimal(texto);
+                    _pesoIntroducidoKg = valor == null
+                        ? null
+                        : _unidadPeso.aKg(valor);
+                    _error = null;
+                  }),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<ActividadCalculadora>(
+                  key: ValueKey(_actividad),
+                  initialValue: _actividad,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Nivel de actividad',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    for (final actividad in ActividadCalculadora.values)
+                      DropdownMenuItem(
+                        value: actividad,
+                        child: Text(actividad.etiqueta),
+                      ),
+                  ],
+                  onChanged: (value) =>
+                      setState(() => _actividad = value ?? _actividad),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<MetaCalculadora>(
+                  key: ValueKey(_meta),
+                  initialValue: _meta,
+                  decoration: const InputDecoration(
+                    labelText: 'Meta',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: MetaCalculadora.perder,
+                      child: Text('Perder peso'),
+                    ),
+                    DropdownMenuItem(
+                      value: MetaCalculadora.mantener,
+                      child: Text('Mantener peso'),
+                    ),
+                    DropdownMenuItem(
+                      value: MetaCalculadora.ganar,
+                      child: Text('Ganar peso'),
+                    ),
+                  ],
+                  onChanged: (value) => setState(() => _meta = value ?? _meta),
+                ),
+                if (_meta == MetaCalculadora.ganar) ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _pesoObjetivo,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: '¿A qué peso quieres llegar?',
+                      suffixText: _unidadPeso.simbolo,
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: (texto) {
+                      _pesoObjetivoEditado = true;
+                      final valor = _decimal(texto);
+                      _pesoObjetivoIntroducidoKg = valor == null
+                          ? null
+                          : _unidadPeso.aKg(valor);
+                      setState(() => _error = null);
+                    },
+                  ),
+                ],
+              ],
             ),
-            DropdownMenuItem(
-              value: MetaCalculadora.mantener,
-              child: Text('Mantener peso'),
-            ),
-            DropdownMenuItem(
-              value: MetaCalculadora.ganar,
-              child: Text('Ganar peso'),
-            ),
-          ],
-          onChanged: (value) => setState(() => _meta = value ?? _meta),
-        ),
-        if (_meta == MetaCalculadora.ganar) ...[
-          const SizedBox(height: 12),
-          TextField(
-            controller: _pesoObjetivo,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              labelText: '¿A qué peso quieres llegar?',
-              suffixText: _unidadPeso.simbolo,
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (texto) {
-              _pesoObjetivoEditado = true;
-              final valor = _decimal(texto);
-              _pesoObjetivoIntroducidoKg = valor == null
-                  ? null
-                  : _unidadPeso.aKg(valor);
-              setState(() => _error = null);
-            },
           ),
-        ],
+        ),
         const SizedBox(height: 16),
         if (mantenimiento != null && objetivo != null)
           Card(

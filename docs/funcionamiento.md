@@ -42,6 +42,9 @@ En Ajustes se puede seleccionar tema (Sistema, Claro u Oscuro), unidad de peso
 (kg o lb) y unidad de longitud/altura (cm o pulgadas). Los cambios se aplican
 inmediatamente y se sincronizan en Firestore.
 
+Los selectores de fecha usan la configuración `es-ES`, con los días abreviados
+en español y la semana empezando en lunes.
+
 ## Resumen semanal
 
 - **Kcal restantes** muestra el objetivo diario de calorías menos el total

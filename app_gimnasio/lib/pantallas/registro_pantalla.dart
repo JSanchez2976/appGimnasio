@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -332,63 +330,125 @@ class _RegistroPantallaState extends ConsumerState<RegistroPantalla> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        OutlinedButton.icon(
-          onPressed: _elegirDia,
-          icon: const Icon(Icons.calendar_today),
-          label: Text('Día: ${_formato(_dia)}'),
-        ),
-        if (hayDatos)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              'Este día ya tiene datos guardados. Puedes editarlos.',
-              style: Theme.of(context).textTheme.bodySmall,
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Registro diario',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                FilledButton.tonalIcon(
+                  onPressed: _elegirDia,
+                  icon: const Icon(Icons.calendar_today_outlined),
+                  label: Text('Día: ${_formato(_dia)}'),
+                ),
+                if (hayDatos)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Este día ya tiene datos guardados. Puedes editarlos.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _pesoCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onChanged: (texto) {
+                    _pesoEditado = true;
+                    final valor = double.tryParse(
+                      texto.trim().replaceAll(',', '.'),
+                    );
+                    _pesoIntroducidoKg = valor == null
+                        ? null
+                        : _unidadPeso.aKg(valor);
+                  },
+                  decoration: InputDecoration(
+                    labelText: 'Peso (${_unidadPeso.simbolo})',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _pesoCtrl,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          onChanged: (texto) {
-            _pesoEditado = true;
-            final valor = double.tryParse(texto.trim().replaceAll(',', '.'));
-            _pesoIntroducidoKg = valor == null ? null : _unidadPeso.aKg(valor);
-          },
-          decoration: InputDecoration(
-            labelText: 'Peso (${_unidadPeso.simbolo})',
-            border: OutlineInputBorder(),
-          ),
         ),
-        const SizedBox(height: 16),
-        Text('Calorías (kcal)', style: Theme.of(context).textTheme.titleSmall),
-        const SizedBox(height: 8),
-        for (final f in Franja.values) ...[
-          TextField(
-            controller: _calCtrl[f],
-            keyboardType: TextInputType.number,
-            maxLength: 5,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              labelText: _nombres[f],
-              border: const OutlineInputBorder(),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.local_fire_department_outlined,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Calorías (kcal)',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                for (final f in Franja.values) ...[
+                  TextField(
+                    controller: _calCtrl[f],
+                    keyboardType: TextInputType.number,
+                    maxLength: 5,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: InputDecoration(
+                      labelText: _nombres[f],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-        ],
-        const SizedBox(height: 4),
-        Text('Nota del día', style: Theme.of(context).textTheme.titleSmall),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _notaCtrl,
-          maxLines: 3,
-          maxLength: 200,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(
-            hintText: 'Cena fuera, cumpleaños, malestar...',
-            border: OutlineInputBorder(),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Nota del día',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _notaCtrl,
+                  maxLines: 3,
+                  maxLength: 200,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: InputDecoration(
+                    hintText: 'Cena fuera, cumpleaños, malestar...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         FilledButton(onPressed: _guardar, child: const Text('Guardar')),
         const SizedBox(height: 32),
         Text('Últimos pesos', style: Theme.of(context).textTheme.titleMedium),

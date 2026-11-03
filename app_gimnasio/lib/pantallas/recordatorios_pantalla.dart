@@ -126,66 +126,98 @@ class _RecordatoriosPantallaState extends State<RecordatoriosPantalla> {
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               const SizedBox(height: 20),
-              Text('Cuándo avisar', style: Theme.of(context).textTheme.titleMedium),
-              RadioListTile<CondicionRecordatorio>(
-                contentPadding: EdgeInsets.zero,
-                value: CondicionRecordatorio.siNoHayRegistro,
-                groupValue: _condicion,
-                onChanged: _guardando
-                    ? null
-                    : (value) => setState(
-                        () => _condicion = value ?? _condicion,
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+                        child: Text(
+                          'Cuándo avisar',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                       ),
-                title: const Text('Solo si aún no he registrado hoy'),
-                subtitle: const Text(
-                  'Al guardar peso o calorías, se omiten los avisos restantes de ese día.',
+                      RadioListTile<CondicionRecordatorio>(
+                        contentPadding: EdgeInsets.zero,
+                        value: CondicionRecordatorio.siNoHayRegistro,
+                        groupValue: _condicion,
+                        onChanged: _guardando
+                            ? null
+                            : (value) => setState(
+                                () => _condicion = value ?? _condicion,
+                              ),
+                        title: const Text('Solo si aún no he registrado hoy'),
+                        subtitle: const Text(
+                          'Al guardar peso o calorías, se omiten los avisos restantes de ese día.',
+                        ),
+                      ),
+                      RadioListTile<CondicionRecordatorio>(
+                        contentPadding: EdgeInsets.zero,
+                        value: CondicionRecordatorio.siempre,
+                        groupValue: _condicion,
+                        onChanged: _guardando
+                            ? null
+                            : (value) => setState(
+                                () => _condicion = value ?? _condicion,
+                              ),
+                        title: const Text('Siempre, aunque ya haya registrado'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              RadioListTile<CondicionRecordatorio>(
-                contentPadding: EdgeInsets.zero,
-                value: CondicionRecordatorio.siempre,
-                groupValue: _condicion,
-                onChanged: _guardando
-                    ? null
-                    : (value) => setState(
-                        () => _condicion = value ?? _condicion,
-                      ),
-                title: const Text('Siempre, aunque ya haya registrado'),
-              ),
               const SizedBox(height: 16),
-              Text('Horas', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              if (_horas.isEmpty)
-                const Text('Todavía no has añadido ningún horario.'),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: [
-                  for (final hora in _horas)
-                    InputChip(
-                      label: Text(_etiquetaHora(hora)),
-                      onDeleted: _guardando
-                          ? null
-                          : () => setState(() => _horas.remove(hora)),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: _guardando ? null : _anadirHora,
-                icon: const Icon(Icons.add_alarm),
-                label: const Text('Añadir hora'),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Horas', style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      if (_horas.isEmpty)
+                        const Text('Todavía no has añadido ningún horario.'),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          for (final hora in _horas)
+                            InputChip(
+                              label: Text(_etiquetaHora(hora)),
+                              onDeleted: _guardando
+                                  ? null
+                                  : () => setState(() => _horas.remove(hora)),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _guardando ? null : _anadirHora,
+                          icon: const Icon(Icons.add_alarm),
+                          label: const Text('Añadir hora'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 20),
-              FilledButton.icon(
-                onPressed: _guardando ? null : _guardar,
-                icon: _guardando
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.save_outlined),
-                label: const Text('Guardar recordatorios'),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _guardando ? null : _guardar,
+                  icon: _guardando
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined),
+                  label: const Text('Guardar recordatorios'),
+                ),
               ),
             ],
           );

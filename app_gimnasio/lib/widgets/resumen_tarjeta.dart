@@ -27,25 +27,30 @@ class ResumenTarjeta extends StatelessWidget {
   String _peso(double kg) =>
       '${unidadPeso.desdeKg(kg).toStringAsFixed(1)} ${unidadPeso.simbolo}';
 
-  Widget _fila(String etiqueta, String valor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: Text(etiqueta)),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Text(
-              valor,
-              textAlign: TextAlign.right,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+  Widget _fila(BuildContext context, String etiqueta, String valor) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(
+            etiqueta,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            valor,
+            textAlign: TextAlign.right,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -94,9 +99,14 @@ class ResumenTarjeta extends StatelessWidget {
       }
     }
 
+    final colores = Theme.of(context).colorScheme;
+    final kcalValor = kcalRestantesHoy == null
+        ? 'Sin objetivo'
+        : '$kcalRestantesHoy kcal';
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -105,27 +115,77 @@ class ResumenTarjeta extends StatelessWidget {
               tituloPeriodo(periodo, inicio),
               style: Theme.of(context).textTheme.bodySmall,
             ),
-            const SizedBox(height: 8),
-            _fila('Días registrados', dias),
-            _fila('Media de calorías', media),
-            if (periodo == Periodo.semana)
-              _fila(
-                'Kcal restantes',
-                kcalRestantesHoy == null ? 'Sin objetivo' : '$kcalRestantesHoy',
-              ),
-            if (periodo == Periodo.semana && estimacionPeso != null)
-              _fila('Tiempo hasta el peso objetivo', estimacionPeso!),
-            if (periodo == Periodo.semana && estimacionPeso != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(
-                  'Estimación simplificada: el gasto real puede variar.',
-                  style: Theme.of(context).textTheme.bodySmall,
+            const SizedBox(height: 16),
+            if (periodo == Periodo.semana) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: colores.primaryContainer,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.local_fire_department_outlined,
+                      color: colores.onPrimaryContainer,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Kcal restantes',
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(color: colores.onPrimaryContainer),
+                          ),
+                          Text(
+                            'para hoy',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: colores.onPrimaryContainer),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        kcalValor,
+                        textAlign: TextAlign.end,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: colores.onPrimaryContainer,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            _fila('Días dentro del rango', rango),
-            _fila('Peso medio', pesoMedio),
-            _fila('Peso respecto a $anterior', variacion),
+              const SizedBox(height: 12),
+              if (estimacionPeso != null) ...[
+                _fila(context, 'Tiempo hasta el peso objetivo', estimacionPeso!),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2, bottom: 8),
+                  child: Text(
+                    'Estimación simplificada: el gasto real puede variar.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
+              const Divider(height: 20),
+            ],
+            Text(
+              'Actividad y calorías',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            _fila(context, 'Días registrados', dias),
+            _fila(context, 'Media de calorías', media),
+            _fila(context, 'Días dentro del rango', rango),
+            const Divider(height: 20),
+            Text('Peso', style: Theme.of(context).textTheme.labelLarge),
+            _fila(context, 'Peso medio', pesoMedio),
+            _fila(context, 'Peso respecto a $anterior', variacion),
           ],
         ),
       ),

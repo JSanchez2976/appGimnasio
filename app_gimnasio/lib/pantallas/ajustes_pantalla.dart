@@ -71,74 +71,96 @@ class _AjustesPantallaState extends ConsumerState<AjustesPantalla> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Apariencia', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<TemaApp>(
-            key: ValueKey(preferencias.tema),
-            initialValue: preferencias.tema,
-            decoration: const InputDecoration(
-              labelText: 'Tema',
-              border: OutlineInputBorder(),
-            ),
-            items: [
-              for (final tema in TemaApp.values)
-                DropdownMenuItem(value: tema, child: Text(tema.etiqueta)),
-            ],
-            onChanged: (tema) {
-              if (tema != null) _guardar(() => _ajustes.guardarTemaApp(tema));
-            },
-          ),
-          const SizedBox(height: 24),
-          Text('Unidades', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<UnidadPeso>(
-            key: ValueKey(preferencias.unidadPeso),
-            initialValue: preferencias.unidadPeso,
-            decoration: const InputDecoration(
-              labelText: 'Peso',
-              border: OutlineInputBorder(),
-            ),
-            items: const [
-              DropdownMenuItem(
-                value: UnidadPeso.kg,
-                child: Text('Kilogramos (kg)'),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Apariencia', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<TemaApp>(
+                    key: ValueKey(preferencias.tema),
+                    initialValue: preferencias.tema,
+                    decoration: const InputDecoration(
+                      labelText: 'Tema',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: [
+                      for (final tema in TemaApp.values)
+                        DropdownMenuItem(value: tema, child: Text(tema.etiqueta)),
+                    ],
+                    onChanged: (tema) {
+                      if (tema != null) {
+                        _guardar(() => _ajustes.guardarTemaApp(tema));
+                      }
+                    },
+                  ),
+                ],
               ),
-              DropdownMenuItem(
-                value: UnidadPeso.lb,
-                child: Text('Libras (lb)'),
-              ),
-            ],
-            onChanged: (unidad) {
-              if (unidad != null) {
-                _guardar(() => _ajustes.guardarUnidadPeso(unidad));
-              }
-            },
+            ),
           ),
           const SizedBox(height: 12),
-          DropdownButtonFormField<UnidadLongitud>(
-            key: ValueKey(preferencias.unidadLongitud),
-            initialValue: preferencias.unidadLongitud,
-            decoration: const InputDecoration(
-              labelText: 'Longitud y altura',
-              border: OutlineInputBorder(),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Unidades', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<UnidadPeso>(
+                    key: ValueKey(preferencias.unidadPeso),
+                    initialValue: preferencias.unidadPeso,
+                    decoration: const InputDecoration(
+                      labelText: 'Peso',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: UnidadPeso.kg,
+                        child: Text('Kilogramos (kg)'),
+                      ),
+                      DropdownMenuItem(
+                        value: UnidadPeso.lb,
+                        child: Text('Libras (lb)'),
+                      ),
+                    ],
+                    onChanged: (unidad) {
+                      if (unidad != null) {
+                        _guardar(() => _ajustes.guardarUnidadPeso(unidad));
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<UnidadLongitud>(
+                    key: ValueKey(preferencias.unidadLongitud),
+                    initialValue: preferencias.unidadLongitud,
+                    decoration: const InputDecoration(
+                      labelText: 'Longitud y altura',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: UnidadLongitud.cm,
+                        child: Text('Centímetros (cm)'),
+                      ),
+                      DropdownMenuItem(
+                        value: UnidadLongitud.pulgadas,
+                        child: Text('Pulgadas (in)'),
+                      ),
+                    ],
+                    onChanged: (unidad) {
+                      if (unidad != null) {
+                        _guardar(() => _ajustes.guardarUnidadLongitud(unidad));
+                      }
+                    },
+                  ),
+                ],
+              ),
             ),
-            items: const [
-              DropdownMenuItem(
-                value: UnidadLongitud.cm,
-                child: Text('Centímetros (cm)'),
-              ),
-              DropdownMenuItem(
-                value: UnidadLongitud.pulgadas,
-                child: Text('Pulgadas (in)'),
-              ),
-            ],
-            onChanged: (unidad) {
-              if (unidad != null) {
-                _guardar(() => _ajustes.guardarUnidadLongitud(unidad));
-              }
-            },
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           const Divider(),
           ListTile(
             contentPadding: EdgeInsets.zero,

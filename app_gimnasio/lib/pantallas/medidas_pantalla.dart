@@ -216,22 +216,42 @@ class _MedidasPantallaState extends ConsumerState<MedidasPantalla> {
             ),
           ),
         const SizedBox(height: 16),
-        for (final medida in Medida.values) ...[
-          TextField(
-            controller: _ctrl[medida],
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (_) => _editadas.add(medida),
-            decoration: InputDecoration(
-              labelText: medida.etiqueta,
-              suffixText: medida == Medida.grasa
-                  ? medida.unidad
-                  : _unidadLongitud.simbolo,
-              border: const OutlineInputBorder(),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Medidas del día', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 12),
+                for (final medida in Medida.values) ...[
+                  TextField(
+                    controller: _ctrl[medida],
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (_) => _editadas.add(medida),
+                    decoration: InputDecoration(
+                      labelText: medida.etiqueta,
+                      suffixText: medida == Medida.grasa
+                          ? medida.unidad
+                          : _unidadLongitud.simbolo,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: _guardar,
+                    child: const Text('Guardar medidas'),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-        ],
-        FilledButton(onPressed: _guardar, child: const Text('Guardar')),
+        ),
         const SizedBox(height: 32),
         Text('Evolución', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
